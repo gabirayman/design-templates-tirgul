@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Recitation 1 (Part 2): UML Sequence Diagrams — BiteExpress</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f5f7;
+    color: #172b4d;
+    overflow: hidden;
+  }
+  .slide {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    padding: 44px 68px;
+    background: #ffffff;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .slide.active { display: flex; }
+  .slide-header {
+    border-bottom: 3px solid #0052cc;
+    padding-bottom: 12px;
+    margin-bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  h1 { font-size: 2.2rem; color: #091e42; }
+  h2 { font-size: 1.75rem; color: #091e42; }
+  h3 { font-size: 1.25rem; color: #0052cc; margin: 12px 0 6px 0; }
+  .slide-num { font-size: 1rem; color: #5e6c84; font-weight: 600; }
+  ul, ol { margin-left: 28px; line-height: 1.52; font-size: 1.12rem; }
+  li { margin-bottom: 7px; }
+  code {
+    font-family: 'Cascadia Code', Consolas, monospace;
+    background: #ebecf0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.94em;
+    color: #c92a2a;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 1.0rem;
+  }
+  th, td {
+    border: 1px solid #dfe1e6;
+    padding: 9px 14px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.42;
+  }
+  th { background: #0052cc; color: #ffffff; font-weight: 600; }
+  tr:nth-child(even) { background: #f8f9fa; }
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 8px;
+  }
+  .card {
+    border: 1px solid #dfe1e6;
+    border-left: 5px solid #0052cc;
+    border-radius: 6px;
+    padding: 15px 18px;
+    background: #fafbfc;
+  }
+  .highlight-box {
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: #e9f2ff;
+    border-left: 5px solid #0052cc;
+    border-radius: 4px;
+    font-size: 1.08rem;
+    line-height: 1.45;
+  }
+  .footer-nav {
+    position: fixed;
+    bottom: 14px;
+    right: 28px;
+    font-size: 0.9rem;
+    color: #6b778c;
+  }
+  .img-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+  .img-container img {
+    max-width: 100%;
+    max-height: 78vh;
+    object-fit: contain;
+    border: 1px solid #dfe1e6;
+  }
+  .split-layout {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 24px;
+    align-items: center;
+    flex: 1;
+    overflow: hidden;
+  }
+  .split-layout img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border: 1px solid #dfe1e6;
+  }
+  @media print {
+    body { overflow: visible; background: #fff; }
+    .slide { display: flex !important; page-break-after: always; height: 100vh; }
+    .footer-nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: INTRO TO SEQUENCE DIAGRAMS -->
+<div class="slide active">
+  <div class="slide-header">
+    <h1>Recitation 1 (Part 2): UML Sequence Diagrams</h1>
+    <span class="slide-num">Slide 1 / 8</span>
+  </div>
+  <h3>From Static Structure (<code>Lec01</code>) to Dynamic Behavior (<code>Lec02</code>)</h3>
+  <ul>
+    <li><strong>What is an Interaction / Sequence Diagram?</strong>
+      <ul>
+        <li>Models the <strong>runtime behavior</strong> of our system during a specific scenario (Use Case) — e.g., <em>"Customer places and pays for an order."</em></li>
+        <li>Emphasizes the <strong>chronological order of messages</strong> passed between objects over time.</li>
+      </ul>
+    </li>
+    <li><strong>The Two Axes (Slide 9):</strong>
+      <ul>
+        <li><strong>X-Axis (Horizontal):</strong> The participating <strong>Objects (Instances)</strong> in RAM.</li>
+        <li><strong>Y-Axis (Vertical, Top &rarr; Bottom):</strong> <strong>Time</strong>. Moving down the diagram means moving forward in time.</li>
+      </ul>
+    </li>
+    <li><strong>Why split into two diagrams? (Slide 21 Rule):</strong>
+      <ul>
+        <li>Sequence diagrams are meant for clear, readable control flow. For complex scenarios, we split the flow into focused diagrams: <strong>1. Place and Pay</strong> and <strong>2. Dispatch Courier</strong>.</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<!-- SLIDE 2: DIAGRAM 1 - PLACE AND PAY -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>Scenario 1: "Place and pay" Sequence Diagram</h2>
+    <span class="slide-num">Slide 2 / 8</span>
+  </div>
+  <div class="img-container">
+    <img src="place_pay.png" alt="Put place_pay.png in the same folder as this HTML file">
+  </div>
+</div>
+
+<!-- SLIDE 3: DIAGRAM 2 - DISPATCH COURIER -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>Scenario 2: "Dispatch courier (continues after isPaid)"</h2>
+    <span class="slide-num">Slide 3 / 8</span>
+  </div>
+  <div class="split-layout">
+    <div>
+      <img src="after_paid.png" alt="Put after_paid.png in the same folder as this HTML file">
+    </div>
+    <div>
+      <h3>How Scenario 2 Connects to Scenario 1:</h3>
+      <ul>
+        <li>Zooms into what happens inside <code>:OrderService</code> right after <code>[isPaid]</code> is true.</li>
+        <li><strong>Asynchronous Event to Kitchen:</strong> Fires <code>GEN(evPrepareOrder(order))</code> to <code>rest:Restaurant</code> without blocking.</li>
+        <li><strong>Synchronous Lookup:</strong> Calls <code>findAvailableCourier(rest)</code> on <code>:DeliveryDispatcher</code> and waits for the <code>courier</code> object to return.</li>
+        <li><strong>Single-Message Guard:</strong> Checks <code>[courier != null]</code> directly on the arrow before firing <code>GEN(evAssignOrder(order))</code>.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 4: OBJECT BOXES, LIFELINES & ACTIVATION -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>1. Object Naming, Lifelines & Activation Boxes</h2>
+    <span class="slide-num">Slide 4 / 8</span>
+  </div>
+  <div class="card-grid">
+    <div class="card">
+      <h3>Object Naming Syntax (Slide 10)</h3>
+      <ul>
+        <li><strong>Syntax:</strong> <u><code>[instanceName]:[ClassName]</code></u></li>
+        <li><strong>Why is the text <u>underlined</u>?</strong><br>
+          In UML, an underline on a box header means this is a <strong>runtime Object (instance)</strong>, whereas no underline (in Class Diagrams) means a Class type!</li>
+        <li><strong>Named Instances:</strong> <u><code>cust:Customer</code></u>, <u><code>rest:Restaurant</code></u>, <u><code>order:Order</code></u>, <u><code>gw:PaymentGateway</code></u>, <u><code>courier:Courier</code></u>.<br>
+          Used when we reference a specific variable or parameter name.</li>
+        <li><strong>Unnamed Instances (<code>:[ClassName]</code>):</strong> <u><code>:OrderService</code></u>, <u><code>:DeliveryDispatcher</code></u>.<br>
+          <strong>Rule:</strong> We omit the instance name when there is only <strong>one single instance</strong> of that class in the diagram!</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Lifelines vs. Activation Boxes (Slides 9–10)</h3>
+      <ul>
+        <li><strong>Life Line (הקו המקווקו האנכי):</strong><br>
+          The dashed vertical line hanging below each object box. Represents the object's existence in memory during the scenario.</li>
+        <li><strong>Activation Box (תיבת הפעלה — המלבן הצר):</strong><br>
+          The narrow vertical white rectangle on top of the lifeline. Shows the exact time duration when the object is <strong>actively executing a method</strong> (or waiting on the call stack for a synchronous call to finish).</li>
+        <li><strong>Notice on <code>rest:Restaurant</code> and <code>order:Order</code>:</strong><br>
+          Synchronous calls (<code>checkOpen()</code>, <code>addLine()</code>) trigger an activation box; asynchronous events (<code>GEN(...)</code>) simply land on the lifeline (queued)!</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: MESSAGE ARROWS (SYNC VS ASYNC VS RETURN) -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>2. Message Types: Synchronous vs. Asynchronous vs. Return</h2>
+    <span class="slide-num">Slide 5 / 8</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:18%">Arrow Style</th>
+        <th style="width:18%">UML Name</th>
+        <th style="width:28%">Where in Our Diagrams</th>
+        <th style="width:36%">Runtime Meaning (Slides 11–14, 28)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Solid Line + Filled Triangle</strong><br><code>────&#9654;</code></td>
+        <td><strong>Synchronous Message (קריאה למתודה סינכרונית)</strong></td>
+        <td>
+          • <code>placeOrder(cust, rest, items, gw)</code><br>
+          • <code>isOpen = checkOpen()</code><br>
+          • <code>addLine(item, 1)</code><br>
+          • <code>total = calculateTotal()</code><br>
+          • <code>isPaid = charge(total)</code><br>
+          • <code>findAvailableCourier(rest)</code>
+        </td>
+        <td><strong>Nested flow of control (Blocking).</strong><br>Control transfers immediately to the called method. The caller <strong>waits</strong> until the method finishes before moving to the next line of code.</td>
+      </tr>
+      <tr>
+        <td><strong>Solid Line + Open Arrowhead</strong><br><code>────&gt;</code></td>
+        <td><strong>Asynchronous Event (שליחת אירוע אסינכרוני)</strong></td>
+        <td>
+          • <code>GEN(evPaid)</code><br>
+          • <code>GEN(evPaymentFailed)</code><br>
+          • <code>GEN(evPrepareOrder(order))</code><br>
+          • <code>GEN(evAssignOrder(order))</code>
+        </td>
+        <td><strong>Independent flow of control ("Fire &amp; Forget").</strong><br>Event enters the target object's <strong>event queue</strong> and is handled when ready. Caller <strong>does NOT wait</strong>, and there is <strong>NO return value</strong>!</td>
+      </tr>
+      <tr>
+        <td><strong>Dashed Line + Arrowhead</strong><br><code>&lt;- - - -</code></td>
+        <td><strong>Return Value (ערך מוחזר)</strong></td>
+        <td>
+          • <strong>Inline style:</strong> <code>isPaid = charge(total)</code><br>
+          • <strong>Dashed arrow style:</strong> <code>order</code>, <code>null</code> (Diagram 1) &amp; <code>courier</code> (Diagram 2)
+        </td>
+        <td><strong>Slide 12 Rule:</strong> We can either write the return value inline on the call (<code>total = calculateTotal()</code>) OR draw a dashed return arrow when returning at the end of a block or passing the result to the next step (<code>courier</code>).</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SLIDE 6: OBJECT CREATION MID-FLOW -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>3. Dynamic Object Creation (<code>&lt;&lt;create&gt;&gt;</code>) &amp; Destruction</h2>
+    <span class="slide-num">Slide 6 / 8</span>
+  </div>
+  <h3>Why is the <u><code>order:Order</code></u> box floating in the middle of Diagram 1 instead of at the top?</h3>
+  <ul>
+    <li><strong>Pre-existing Objects (Top Row):</strong>
+      <ul>
+        <li><u><code>cust:Customer</code></u>, <u><code>:OrderService</code></u>, <u><code>rest:Restaurant</code></u>, and <u><code>gw:PaymentGateway</code></u> already exist in RAM before <code>placeOrder()</code> is called, so their boxes sit at the very top of the Y-axis (Time = 0).</li>
+      </ul>
+    </li>
+    <li><strong>Mid-Flow Instantiation (<code>&lt;&lt;create&gt;&gt; Order(cust)</code> — Slide 15):</strong>
+      <ul>
+        <li><code>order:Order</code> does <strong>not</strong> exist when the scenario starts!</li>
+        <li>Only <em>after</em> <code>checkOpen()</code> returns <code>true</code> (inside the <code>[isOpen]</code> branch) does <code>:OrderService</code> call the constructor <code>&lt;&lt;create&gt;&gt; Order(cust)</code>.</li>
+        <li>Therefore, the arrow points directly into the side of the <u><code>order:Order</code></u> box, and its lifeline begins at that exact moment in time!</li>
+      </ul>
+    </li>
+    <li><strong>Object Destruction (<code>&lt;&lt;destroy&gt;&gt;</code> — Slide 15 Note):</strong>
+      <ul>
+        <li>An object can delete another object via a <code>&lt;&lt;destroy&gt;&gt;</code> message (ending its lifeline with a big <strong><code>X</code></strong>).</li>
+        <li><strong>Best Practice (Slide 15):</strong> Avoid modeling object destruction unless manual memory management (e.g., C++ <code>delete</code> without GC) is a critical requirement. Instead, in Java we send <code>GEN(evPaymentFailed)</code> so <code>Order</code> transitions to a cancelled/terminated state!</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<!-- SLIDE 7: CONTROL FLOW FRAGMENTS -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>4. Control Flow: Guards, <code>opt</code>, <code>alt</code> &amp; <code>loop</code></h2>
+    <span class="slide-num">Slide 7 / 8</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:20%">Construct</th>
+        <th style="width:22%">UML Syntax</th>
+        <th style="width:28%">Where in Our Diagrams</th>
+        <th style="width:30%">When to Use It (Slides 16–20)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Single-Message Guard</strong><br>(Slide 16)</td>
+        <td><code>[condition] msg()</code><br><em>(No frame box!)</em></td>
+        <td><strong>Diagram 2:</strong><br><code>[courier != null] GEN(evAssignOrder(order))</code></td>
+        <td>When <strong>only 1 message</strong> is conditional. Just write <code>[expression]</code> before the method name — no box needed!</td>
+      </tr>
+      <tr>
+        <td><strong><code>opt</code> Fragment</strong><br>(Slide 17)</td>
+        <td>Frame labeled <code>opt</code> with <code>[condition]</code></td>
+        <td><em>Concept check:</em> If Diagram 1 didn't return <code>null</code> when closed, the outer box would be <code>opt [isOpen]</code>!</td>
+        <td>Conditional code (<code>if</code> <strong>without</strong> an <code>else</code>) that spans <strong>more than one</strong> method call.</td>
+      </tr>
+      <tr>
+        <td><strong><code>alt</code> Fragment</strong><br>(Slide 18)</td>
+        <td>Frame labeled <code>alt</code> split by a <strong>horizontal dashed line</strong></td>
+        <td><strong>Diagram 1:</strong><br>• Outer <code>alt</code>: <code>[isOpen]</code> vs. <code>[closed]</code><br>• Inner <code>alt</code>: <code>[isPaid]</code> vs. <code>[payment failed]</code></td>
+        <td>Mutually exclusive <strong><code>if / else</code></strong> branches. Only one section executes depending on the guard condition.</td>
+      </tr>
+      <tr>
+        <td><strong><code>loop</code> Fragment</strong><br>(Slides 19–20)</td>
+        <td>Frame labeled <code>loop</code> with <code>[foreach ...]</code> or <code>[while ...]</code></td>
+        <td><strong>Diagram 1:</strong><br><code>loop [foreach item in items]</code> &rarr; <code>addLine(item, 1)</code></td>
+        <td>Repeated execution. <em>(Note: If a loop has only 1 call, Slide 19 also allows writing <code>[foreach item] addLine(item)</code> directly on the arrow!)</em></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SLIDE 8: CONNECTING STATIC & DYNAMIC MODELS -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>5. The Golden Exam Rule: Class Diagram &harr; Sequence Diagram</h2>
+    <span class="slide-num">Slide 8 / 8</span>
+  </div>
+  <h3>How to verify your Sequence Diagram against your Class Diagram (Slide 5 &amp; 11):</h3>
+  <ul>
+    <li><strong>Rule 1 — Method Ownership (Slide 5):</strong><br>
+      If Lifeline <code>A</code> sends message <code>foo()</code> to Lifeline <code>B</code> (<code>A &rarr; B : foo()</code>), then the method <code>+foo()</code> <strong>MUST exist inside Class <code>B</code></strong> (not Class <code>A</code>!).
+      <ul>
+        <li><code>service &rarr; rest : checkOpen()</code> &rArr; <code>checkOpen()</code> is a method inside <code>Restaurant</code>.</li>
+        <li><code>service &rarr; order : addLine(item, 1)</code> &rArr; <code>addLine()</code> is a method inside <code>Order</code>.</li>
+        <li><code>service &rarr; gw : charge(total)</code> &rArr; <code>charge()</code> is a method inside <code>PaymentGateway</code>.</li>
+      </ul>
+    </li>
+    <li><strong>Rule 2 — Relationship / Dependency (Slide 11):</strong><br>
+      Sending a message from <code>A</code> to <code>B</code> requires a link between <code>A</code> and <code>B</code> in the Class Diagram!
+      <ul>
+        <li>How can <code>:OrderService</code> call <code>rest</code>, <code>gw</code>, and <code>order</code>? Because they were passed as parameters / created locally (<strong>Dependency <code>..&gt;</code></strong> in our Class Diagram!).</li>
+        <li>How can <code>:OrderService</code> call <code>:DeliveryDispatcher</code> in Diagram 2? Because <code>OrderService</code> has a <strong>Directed Association (<code>──&gt; itsDispatcher</code>)</strong> to <code>DeliveryDispatcher</code>!</li>
+      </ul>
+    </li>
+  </ul>
+  <div class="highlight-box">
+    <strong>Bridge to Part 3 (Statecharts):</strong> Look at the asynchronous events we just sent: <code>GEN(evPaid)</code> and <code>GEN(evPaymentFailed)</code> to <code>order:Order</code>. How does the <code>Order</code> object react when those events arrive in its queue? That is defined by its <strong>Statechart</strong>!
+  </div>
+</div>
+
+<div class="footer-nav">Use ⬅️ ➡️ Arrow Keys or Spacebar to navigate | Press Ctrl+P to export PDF</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+  function showSlide(index) {
+    slides[current].classList.remove('active');
+    current = (index + slides.length) % slides.length;
+    slides[current].classList.add('active');
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') showSlide(current + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') showSlide(current - 1);
+  });
+</script>
+</body>
+</html>

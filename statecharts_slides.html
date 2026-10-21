@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Recitation 1 (Part 3): UML Statecharts — BiteExpress</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f5f7;
+    color: #172b4d;
+    overflow: hidden;
+  }
+  .slide {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    padding: 44px 68px;
+    background: #ffffff;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .slide.active { display: flex; }
+  .slide-header {
+    border-bottom: 3px solid #0052cc;
+    padding-bottom: 12px;
+    margin-bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  h1 { font-size: 2.2rem; color: #091e42; }
+  h2 { font-size: 1.75rem; color: #091e42; }
+  h3 { font-size: 1.25rem; color: #0052cc; margin: 12px 0 6px 0; }
+  .slide-num { font-size: 1rem; color: #5e6c84; font-weight: 600; }
+  ul, ol { margin-left: 28px; line-height: 1.52; font-size: 1.12rem; }
+  li { margin-bottom: 7px; }
+  code {
+    font-family: 'Cascadia Code', Consolas, monospace;
+    background: #ebecf0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.94em;
+    color: #c92a2a;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 1.0rem;
+  }
+  th, td {
+    border: 1px solid #dfe1e6;
+    padding: 9px 14px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.42;
+  }
+  th { background: #0052cc; color: #ffffff; font-weight: 600; }
+  tr:nth-child(even) { background: #f8f9fa; }
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 8px;
+  }
+  .card {
+    border: 1px solid #dfe1e6;
+    border-left: 5px solid #0052cc;
+    border-radius: 6px;
+    padding: 15px 18px;
+    background: #fafbfc;
+  }
+  .highlight-box {
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: #e9f2ff;
+    border-left: 5px solid #0052cc;
+    border-radius: 4px;
+    font-size: 1.08rem;
+    line-height: 1.45;
+  }
+  .footer-nav {
+    position: fixed;
+    bottom: 14px;
+    right: 28px;
+    font-size: 0.9rem;
+    color: #6b778c;
+  }
+  .img-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+  .img-container img {
+    max-width: 100%;
+    max-height: 78vh;
+    object-fit: contain;
+    border: 1px solid #dfe1e6;
+  }
+  .split-layout {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 24px;
+    align-items: center;
+    flex: 1;
+    overflow: hidden;
+  }
+  .split-layout img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border: 1px solid #dfe1e6;
+  }
+  pre {
+    background: #172b4d;
+    color: #f4f5f7;
+    padding: 14px 18px;
+    border-radius: 6px;
+    font-family: 'Cascadia Code', Consolas, monospace;
+    font-size: 0.98rem;
+    line-height: 1.45;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .bad { border-left-color: #de350b; background: #ffebe6; }
+  .good { border-left-color: #00875a; background: #e3fcef; }
+  @media print {
+    body { overflow: visible; background: #fff; }
+    .slide { display: flex !important; page-break-after: always; height: 100vh; }
+    .footer-nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: INTRO -->
+<div class="slide active">
+  <div class="slide-header">
+    <h1>Recitation 1 (Part 3): UML Statecharts</h1>
+    <span class="slide-num">Slide 1 / 8</span>
+  </div>
+  <h3>From Interaction Between Objects (<code>Sequence</code>) to the Behavior Inside One Object (<code>Statechart</code>)</h3>
+  <ul>
+    <li><strong>What is a Statechart?</strong>
+      <ul>
+        <li>Models how <strong>one object</strong> reacts to <strong>events</strong> over its lifetime, depending on the <strong>state</strong> (מצב) it is currently in.</li>
+        <li>The same event can do <strong>different things</strong> in different states &mdash; that is the whole point.</li>
+      </ul>
+    </li>
+    <li><strong>Reactive Classes (Lec02, Slide 23):</strong>
+      <ul>
+        <li>Only classes with a <strong>real lifecycle</strong> get a statechart. In BiteExpress: <code>Order</code> and <code>Courier</code>.</li>
+        <li><code>Customer</code>, <code>MenuItem</code>, <code>OrderService</code>, <code>DeliveryDispatcher</code> just hold data or call methods &mdash; <strong>no statechart</strong>.</li>
+      </ul>
+    </li>
+    <li><strong>The Bridge from Part 2:</strong>
+      <ul>
+        <li>The events we <code>GEN</code>erated in the sequence diagrams (<code>evPaid</code>, <code>evAssignOrder</code>, ...) land in an object's <strong>event queue</strong>. The statechart defines <strong>what happens next</strong>.</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<!-- SLIDE 2: BAD DESIGN -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>Bad Design First: The Boolean-Flags <code>Order</code></h2>
+    <span class="slide-num">Slide 2 / 8</span>
+  </div>
+<pre>class Order {
+    boolean paid, preparing, outForDelivery, delivered, cancelled;
+
+    void cancel() {
+        if (!delivered &amp;&amp; !cancelled) {
+            if (paid &amp;&amp; !preparing) refund();
+            else if (preparing &amp;&amp; !outForDelivery &amp;&amp; withinGracePeriod()) refund();
+            cancelled = true;   // paid is still true, preparing may still be true...
+        }
+    }
+}</pre>
+  <div class="card-grid">
+    <div class="card" style="border-left-color:#de350b">
+      <h3 style="color:#de350b">What is wrong?</h3>
+      <ul>
+        <li><strong>5 booleans = 32 combinations</strong>, but the order has only <strong>6 legal situations</strong>.</li>
+        <li>Nothing prevents <code>delivered &amp;&amp; cancelled</code> or <code>paid &amp;&amp; cancelled</code>.</li>
+        <li>Every new feature adds another <code>if</code> to <strong>every</strong> method.</li>
+      </ul>
+    </div>
+    <div class="card" style="border-left-color:#00875a">
+      <h3 style="color:#00875a">The fix</h3>
+      <ul>
+        <li>The order is in <strong>exactly one state</strong> at a time: <code>Created</code>, <code>Paid</code>, <code>Preparing</code>, <code>OutForDelivery</code>, <code>Delivered</code> or <code>Cancelled</code>.</li>
+        <li>Each state lists <strong>which events it reacts to</strong> &mdash; everything else is ignored.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3: ORDER STATECHART -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>The <code>Order</code> Statechart</h2>
+    <span class="slide-num">Slide 3 / 8</span>
+  </div>
+  <div class="img-container">
+    <img src="statechart_order.png" alt="Put statechart_order.png in the same folder as this HTML file">
+  </div>
+</div>
+
+<!-- SLIDE 4: ANATOMY -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>1. Anatomy of a Statechart (Lec02, Slides 22&ndash;30)</h2>
+    <span class="slide-num">Slide 4 / 8</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:20%">Element</th>
+        <th style="width:24%">Where in the <code>Order</code> Chart</th>
+        <th style="width:56%">Meaning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>State (מצב)</strong><br>rounded box</td>
+        <td><code>Created</code>, <code>Paid</code>, <code>Preparing</code>, ...</td>
+        <td>A situation the object stays in until an event moves it. Exactly <strong>one</strong> state is active at any time.</td>
+      </tr>
+      <tr>
+        <td><strong>Default transition</strong><br>filled circle &rarr;</td>
+        <td><code>[*] &rarr; Created</code></td>
+        <td>Where a <strong>newly created</strong> object starts. Right after <code>&laquo;create&raquo; Order(cust)</code>, the order is in <code>Created</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>Transition (מעבר)</strong><br>labeled arrow</td>
+        <td><code>Created &rarr; Paid</code> on <code>evPaid</code></td>
+        <td>Label format: <code>Trigger [Guard] / Action</code>. <strong>Trigger</strong> = the event (אירוע) that fires it, <strong>Guard</strong> = a condition that must be true (תנאי), <strong>Action</strong> = code that runs during the move (פעולה).</td>
+      </tr>
+      <tr>
+        <td><strong>Self transition</strong></td>
+        <td><code>Created &rarr; Created</code> on <code>evPaymentFailed / showError()</code></td>
+        <td>The event is handled, the action runs, but the object <strong>stays</strong> in the same state.</td>
+      </tr>
+      <tr>
+        <td><strong>End state</strong><br>circled dot</td>
+        <td><code>Delivered &rarr; &#9673;</code>, <code>Cancelled &rarr; &#9673;</code></td>
+        <td>The lifecycle is over. No more events are handled.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SLIDE 5: SAME EVENT, DIFFERENT BEHAVIOR -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>2. Same Event, Different Behavior: <code>evCancel</code></h2>
+    <span class="slide-num">Slide 5 / 8</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:20%">Current State</th>
+        <th style="width:32%">Transition</th>
+        <th style="width:48%">What Happens</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Created</code></td>
+        <td><code>evCancel</code> &rarr; <code>Cancelled</code></td>
+        <td>Nothing was charged yet, so there is nothing to refund.</td>
+      </tr>
+      <tr>
+        <td><code>Paid</code></td>
+        <td><code>evCancel / refund()</code> &rarr; <code>Cancelled</code></td>
+        <td>Money was charged and the kitchen has not started: <strong>refund</strong> and cancel.</td>
+      </tr>
+      <tr>
+        <td><code>Preparing</code></td>
+        <td><code>evCancel [withinGracePeriod] / refund()</code> &rarr; <code>Cancelled</code></td>
+        <td><strong>Guard:</strong> only if <code>withinGracePeriod</code> is true. If the guard is false, <strong>nothing happens</strong> and the order stays in <code>Preparing</code>.</td>
+      </tr>
+      <tr>
+        <td><code>OutForDelivery</code></td>
+        <td><em>(no <code>evCancel</code> transition)</em></td>
+        <td>The event is <strong>ignored</strong>. This is a <strong>design decision</strong>: cancellation is not allowed once the courier left.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="highlight-box">
+    <strong>Compare with the bad design:</strong> the boolean version needed one nested <code>if</code> to get this right. Here the answer is visible by <strong>reading the arrows</strong> &mdash; and a missing arrow is a deliberate rule, not a forgotten case.
+  </div>
+</div>
+
+<!-- SLIDE 6: COURIER STATECHART -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>3. The <code>Courier</code> Statechart: Objects Talking via Events</h2>
+    <span class="slide-num">Slide 6 / 8</span>
+  </div>
+  <div class="split-layout">
+    <div>
+      <img src="statechart_courier.png" alt="Put statechart_courier.png in the same folder as this HTML file">
+    </div>
+    <div>
+      <h3>Reading the Chart:</h3>
+      <ul>
+        <li><strong>Event with parameters:</strong> <code>evAssignOrder</code> carries the order. The action <code>itsCurrentOrder = params.order</code> stores it (role name <code>itsCurrentOrder</code> from our class diagram).</li>
+        <li><strong>Sending an event to another object:</strong> <code>itsCurrentOrder.GEN(evPickedUp)</code> and <code>itsCurrentOrder.GEN(evDelivered)</code> fire into the <strong>Order's</strong> queue &mdash; these are exactly the events the <code>Order</code> chart waits for.</li>
+        <li><strong>Querying a state:</strong> <code>isAvailable() { return IS_IN(Available); }</code> &mdash; this is how <code>:DeliveryDispatcher</code> decides in <code>findAvailableCourier()</code>.</li>
+        <li><strong><code>evPickup</code> / <code>evDropOff</code></strong> come from outside (the courier pressing a button in the app).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: THE EVENT LOOP -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>4. Closing the Loop: Sequence Diagrams &harr; Statecharts</h2>
+    <span class="slide-num">Slide 7 / 8</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:20%">Event</th>
+        <th style="width:26%">Sent By &rarr; Handled By</th>
+        <th style="width:22%">Where It Is Sent</th>
+        <th style="width:32%">Transition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>evPaid</code></td>
+        <td><code>:OrderService</code> &rarr; <code>order</code></td>
+        <td>Seq. 1, branch <code>[isPaid]</code></td>
+        <td><code>Created</code> &rarr; <code>Paid</code></td>
+      </tr>
+      <tr>
+        <td><code>evPaymentFailed</code></td>
+        <td><code>:OrderService</code> &rarr; <code>order</code></td>
+        <td>Seq. 1, branch <code>[payment failed]</code></td>
+        <td><code>Created</code> &rarr; <code>Created</code> / <code>showError()</code></td>
+      </tr>
+      <tr>
+        <td><code>evPrepareOrder</code></td>
+        <td><code>:OrderService</code> &rarr; <code>rest</code></td>
+        <td>Seq. 2</td>
+        <td>Restaurant replies with <code>evAccept</code> to the order</td>
+      </tr>
+      <tr>
+        <td><code>evAccept</code></td>
+        <td><code>rest</code> &rarr; <code>order</code></td>
+        <td>Restaurant's reaction</td>
+        <td><code>Paid</code> &rarr; <code>Preparing</code></td>
+      </tr>
+      <tr>
+        <td><code>evAssignOrder</code></td>
+        <td><code>:OrderService</code> &rarr; <code>courier</code></td>
+        <td>Seq. 2, guard <code>[courier != null]</code></td>
+        <td><code>Available</code> &rarr; <code>ToRestaurant</code></td>
+      </tr>
+      <tr>
+        <td><code>evPickedUp</code></td>
+        <td><code>courier</code> &rarr; <code>order</code></td>
+        <td>Courier chart, <code>evPickup</code></td>
+        <td><code>Preparing</code> &rarr; <code>OutForDelivery</code></td>
+      </tr>
+      <tr>
+        <td><code>evDelivered</code></td>
+        <td><code>courier</code> &rarr; <code>order</code></td>
+        <td>Courier chart, <code>evDropOff</code></td>
+        <td><code>OutForDelivery</code> &rarr; <code>Delivered</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="highlight-box">
+    <strong>Rule:</strong> every event that is <strong>sent</strong> in a sequence diagram must be <strong>received</strong> by a transition in some statechart &mdash; otherwise it goes nowhere. <em>(The <code>Restaurant</code> reacts to <code>evPrepareOrder</code> too, but it has only two states, so we do not draw it here.)</em>
+  </div>
+</div>
+
+<!-- SLIDE 8: CHECKLIST -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>5. Checklist for Your Own System</h2>
+    <span class="slide-num">Slide 8 / 8</span>
+  </div>
+  <div class="card-grid">
+    <div class="card">
+      <h3>Choosing What to Draw</h3>
+      <ul>
+        <li>Draw a statechart <strong>only</strong> for the class with a real lifecycle &mdash; not one per class.</li>
+        <li>Be ready to explain <strong>why</strong> that class is reactive.</li>
+        <li>Find its lifecycle first: list the states, then ask "which event moves it from here to there?"</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Checking Your Chart</h3>
+      <ul>
+        <li>Exactly <strong>one</strong> default transition into the first state.</li>
+        <li>Every transition reads <code>Trigger [Guard] / Action</code> (guard and action are optional).</li>
+        <li>At least <strong>one guard</strong> and one case of the <strong>same event in different states</strong>.</li>
+        <li>Every event name matches an event sent in your sequence diagram.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="highlight-box">
+    <strong>The Golden Rule across all three diagrams:</strong> Class diagram &rarr; method and role names. Sequence diagram &rarr; uses <strong>only</strong> those names and sends events. Statechart &rarr; <strong>handles</strong> those events. If a name appears in one diagram but not where it should in another, one of them is wrong.
+  </div>
+</div>
+
+<div class="footer-nav">Use ⬅️ ➡️ Arrow Keys or Spacebar to navigate | Press Ctrl+P to export PDF</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+  function showSlide(index) {
+    slides[current].classList.remove('active');
+    current = (index + slides.length) % slides.length;
+    slides[current].classList.add('active');
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') showSlide(current + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') showSlide(current - 1);
+  });
+</script>
+</body>
+</html>

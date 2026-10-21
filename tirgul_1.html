@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Recitation 1: UML Class Diagram — BiteExpress</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f5f7;
+    color: #172b4d;
+    overflow: hidden;
+  }
+  .slide {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    padding: 48px 72px;
+    background: #ffffff;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .slide.active { display: flex; }
+  .slide-header {
+    border-bottom: 3px solid #0052cc;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  h1 { font-size: 2.3rem; color: #091e42; }
+  h2 { font-size: 1.75rem; color: #091e42; }
+  h3 { font-size: 1.25rem; color: #0052cc; margin: 14px 0 6px 0; }
+  .slide-num { font-size: 1rem; color: #5e6c84; font-weight: 600; }
+  ul, ol { margin-left: 28px; line-height: 1.55; font-size: 1.15rem; }
+  li { margin-bottom: 8px; }
+  code {
+    font-family: 'Cascadia Code', Consolas, monospace;
+    background: #ebecf0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    color: #c92a2a;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 1.02rem;
+  }
+  th, td {
+    border: 1px solid #dfe1e6;
+    padding: 10px 14px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  th { background: #0052cc; color: #ffffff; font-weight: 600; }
+  tr:nth-child(even) { background: #f8f9fa; }
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 10px;
+  }
+  .card {
+    border: 1px solid #dfe1e6;
+    border-left: 5px solid #0052cc;
+    border-radius: 6px;
+    padding: 16px 20px;
+    background: #fafbfc;
+  }
+  .footer-nav {
+    position: fixed;
+    bottom: 14px;
+    right: 28px;
+    font-size: 0.9rem;
+    color: #6b778c;
+  }
+  .img-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+  .img-container img {
+    max-width: 100%;
+    max-height: 78vh;
+    object-fit: contain;
+    border: 1px solid #dfe1e6;
+  }
+  @media print {
+    body { overflow: visible; background: #fff; }
+    .slide { display: flex !important; page-break-after: always; height: 100vh; }
+    .footer-nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: TITLE & OVERVIEW -->
+<div class="slide active">
+  <div class="slide-header">
+    <h1>Recitation 1: Static UML & Class Diagrams</h1>
+    <span class="slide-num">Slide 1 / 8</span>
+  </div>
+  <h3>Running Course Project: "BiteExpress" Food Delivery System</h3>
+  <ul>
+    <li><strong>Why one system all semester?</strong> Instead of learning a new toy domain every week, we build and refactor one real-world architecture using every tool taught in lectures.</li>
+    <li><strong>Static Model (<code>Lec01</code>) vs. Dynamic Model (<code>Lec02</code>):</strong>
+      <ul>
+        <li><strong>Static UML (Class Diagrams):</strong> Models structure — classes, interfaces, fields, method signatures, and relationships. Relevant at <strong>compile time</strong>.</li>
+        <li><strong>Dynamic UML (Sequence & Statecharts):</strong> Models behavior — objects in RAM, message passing, and state transitions. Relevant at <strong>run time</strong>.</li>
+      </ul>
+    </li>
+    <li><strong>Today's Part 1 Goal:</strong> Master the 3 box types, internal class syntax, visibility modifiers, multiplicity, and the 7 UML relationship arrows + their exact Java code equivalents.</li>
+  </ul>
+</div>
+
+<!-- SLIDE 2: THE FULL DIAGRAM -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>BiteExpress — Full Static Class Diagram</h2>
+    <span class="slide-num">Slide 2 / 8</span>
+  </div>
+  <div class="img-container">
+    <img src="state_chart.png" alt="Put state_chart.png in the same folder as this HTML file">
+  </div>
+</div>
+
+<!-- SLIDE 3: BOX TYPES -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>1. Box Types: Concrete vs. Abstract vs. Interface</h2>
+    <span class="slide-num">Slide 3 / 8</span>
+  </div>
+  <ul>
+    <li><strong>Standard Concrete Class (<code>(C)</code> green circle):</strong>
+      <ul>
+        <li><strong>Where in diagram:</strong> <code>Order</code>, <code>Customer</code>, <code>Restaurant</code>, <code>MenuItem</code>, <code>OrderLine</code>, <code>BikeCourier</code>, <code>CarCourier</code>, <code>StripeGateway</code>, <code>PayPalGateway</code>, <code>OrderService</code>, <code>DeliveryDispatcher</code>.</li>
+        <li><strong>Meaning:</strong> A fully implemented blueprint that can be instantiated directly using <code>new</code> (e.g., <code>new Order(cust)</code>).</li>
+      </ul>
+    </li>
+    <li><strong>Abstract Class (<code>(A)</code> blue circle + <em>Italicized Name</em>):</strong>
+      <ul>
+        <li><strong>Where in diagram:</strong> <em><code>User</code></em> and <em><code>Courier</code></em>.</li>
+        <li><strong>Meaning:</strong> Partial blueprint that <strong>cannot</strong> be instantiated directly (<code>new Courier()</code> is a compiler error). Shares common state (<code>#userId</code>, <code>#currentLat</code>) and common behavior (<code>+updateLocation()</code>) among subclasses.</li>
+        <li><strong>Abstract Methods (<em>Italicized</em>):</strong> Inside <em><code>Courier</code></em>, look at <em><code>+calculateETA(distanceKm: double): int</code></em>. Written in <em>italics</em> = no method body (<code>abstract int calculateETA(double d);</code>). Concrete children (<code>BikeCourier</code>, <code>CarCourier</code>) <strong>must</strong> override and implement it.</li>
+      </ul>
+    </li>
+    <li><strong>Interface (<code>(I)</code> purple circle + <code>&lt;&lt;interface&gt;&gt;</code> stereotype):</strong>
+      <ul>
+        <li><strong>Where in diagram:</strong> <code>&lt;&lt;interface&gt;&gt; PaymentGateway</code>.</li>
+        <li><strong>Meaning:</strong> A pure <strong>contract</strong> of capabilities ("Can-Do") with <strong>no state</strong> (no instance fields). Only declares method signatures (<code>+charge()</code>, <code>+refund()</code>). Implementing classes promise to provide the code.</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<!-- SLIDE 4: INSIDE THE BOX -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>2. Inside the Box: Compartments, Visibility & Static</h2>
+    <span class="slide-num">Slide 4 / 8</span>
+  </div>
+  <div class="card-grid">
+    <div class="card">
+      <h3>The 3 Compartments & Type Syntax</h3>
+      <ul>
+        <li><strong>Top:</strong> Class Name</li>
+        <li><strong>Middle:</strong> Attributes (Fields / State). Empty in <code>OrderService</code> & <code>DeliveryDispatcher</code> because they only have associations!</li>
+        <li><strong>Bottom:</strong> Operations (Methods & Constructors).</li>
+        <li><strong>Reversed Type Syntax (Name : Type):</strong>
+          <ul>
+            <li>Field: <code>[vis] name : Type [= default]</code><br>&rarr; <code>- orderCounter: int = 0</code></li>
+            <li>Method: <code>[vis] name(arg: Type): ReturnType</code><br>&rarr; <code>+ charge(amount: double): boolean</code></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Access Modifiers & Typography</h3>
+      <ul>
+        <li><code>-</code> (<strong>private</strong>): Visible <em>only</em> inside this class (e.g., <code>-apiKey: String</code> in <code>StripeGateway</code>, <code>-orderId: String</code> in <code>Order</code>).</li>
+        <li><code>#</code> (<strong>protected</strong>): Visible to this class <strong>and subclasses</strong> (<code>extends</code>). Look at <em><code>User</code></em> (<code>#userId</code>, <code>#name</code>) and <em><code>Courier</code></em> (<code>#currentLat</code>, <code>#isAvailable</code>) so children can access them directly!</li>
+        <li><code>+</code> (<strong>public</strong>): Visible to everyone (<code>+placeOrder()</code>).</li>
+        <li><strong><u>Underlined</u> = <code>static</code> (Class-level):</strong><br>
+          In <code>Order</code>: <u><code>-orderCounter: int = 0</code></u> and <u><code>+getOrderCount(): int</code></u> are shared across the entire class in RAM, not per instance.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: GROUP A - TRIANGLES -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>3A. Relationship Lines: Triangles ("Is-A" / Polymorphism)</h2>
+    <span class="slide-num">Slide 5 / 8</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:18%">Line Style</th>
+        <th style="width:18%">UML Name</th>
+        <th style="width:12%">Java Keyword</th>
+        <th style="width:24%">Where in Diagram</th>
+        <th style="width:28%">Core Concept</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Solid Line + Hollow Triangle</strong><br><code>──▷</code></td>
+        <td><strong>Generalization (Inheritance / ירושה)</strong></td>
+        <td><code>extends</code></td>
+        <td>
+          • <code>Customer ──▷ User</code><br>
+          • <code>Courier ──▷ User</code><br>
+          • <code>BikeCourier ──▷ Courier</code><br>
+          • <code>CarCourier ──▷ Courier</code>
+        </td>
+        <td><strong>"B is a type of A."</strong> Arrow always points UP to the parent. <code>BikeCourier</code> inherits all fields and methods of <code>Courier</code> AND <code>User</code> (2-level hierarchy).</td>
+      </tr>
+      <tr>
+        <td><strong>Dashed Line + Hollow Triangle</strong><br><code>╌╌▷</code></td>
+        <td><strong>Realization (מימוש ממשק)</strong></td>
+        <td><code>implements</code></td>
+        <td>
+          • <code>StripeGateway ╌╌▷ PaymentGateway</code><br>
+          • <code>PayPalGateway ╌╌▷ PaymentGateway</code>
+        </td>
+        <td><strong>"B fulfills contract A."</strong> Dashed line means the parent is purely a specification (interface); the child <em>realizes</em> (makes real) those abstract methods.</td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 style="margin-top:24px;">Quick Visual Rule:</h3>
+  <ul>
+    <li>Both Inheritance and Realization end with a <strong>closed hollow triangle (<code>▷</code>)</strong> pointing to the abstraction.</li>
+    <li><strong>Solid line</strong> = extending a class (<code>extends</code>). <strong>Dashed line</strong> = implementing an interface (<code>implements</code>).</li>
+  </ul>
+</div>
+
+<!-- SLIDE 6: GROUP B - WEAKEST TO MID ARROWS -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>3B. "Uses-A" & "Has-A" Arrows (Part 1: References)</h2>
+    <span class="slide-num">Slide 6 / 8</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:16%">Line Style</th>
+        <th style="width:16%">UML Name</th>
+        <th style="width:22%">Exact Java Equivalent</th>
+        <th style="width:22%">Where in Diagram</th>
+        <th style="width:24%">What to Tell Students</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Dashed Line + Open Arrow</strong><br><code>╌╌&gt;</code></td>
+        <td><strong>Dependency (תלות)</strong></td>
+        <td><strong>NO field in the class!</strong><br>Only a method parameter, return type, local var, or static call.</td>
+        <td>
+          • <code>OrderService ╌╌&gt; PaymentGateway</code> (<code>&lt;&lt;uses&gt;&gt;</code>)<br>
+          • <code>OrderService ╌╌&gt; Restaurant</code><br>
+          • <code>OrderService ╌╌&gt; Order</code> (<code>&lt;&lt;creates&gt;&gt;</code>)<br>
+          • <code>DeliveryDispatcher ╌╌&gt; Restaurant</code>
+        </td>
+        <td><strong>Weakest link.</strong> <code>placeOrder(cust, rest, gw): Order</code> receives <code>rest</code> & <code>gw</code> as parameters and returns a new <code>Order</code>. Once finished, <code>OrderService</code> keeps NO pointer to them!</td>
+      </tr>
+      <tr>
+        <td><strong>2. Solid Line + Single Open Arrow</strong><br><code>──&gt;</code></td>
+        <td><strong>Directed Association (קשר חד-כיווני)</strong></td>
+        <td><strong>A field (reference)</strong> inside source class:<br><code>private B itsB;</code></td>
+        <td>
+          • <code>OrderService "1" ──&gt; "1" DeliveryDispatcher</code> (<code>itsDispatcher</code>)<br>
+          • <code>Order "*" ──&gt; "1" Customer</code> (<code>itsCustomer</code>)<br>
+          • <code>OrderLine "*" ──&gt; "1" MenuItem</code> (<code>itsItem</code>)
+        </td>
+        <td><strong>"A knows about B, but B doesn't know about A."</strong> <code>Order</code> has <code>private Customer itsCustomer;</code>. <code>Customer</code> has no list of orders. Neither owns the other's lifecycle.</td>
+      </tr>
+      <tr>
+        <td><strong>3. Solid Line + Two Open Arrows</strong><br><code>&lt;──&gt;</code></td>
+        <td><strong>Bi-Directional Association (קשר דו-כיווני)</strong></td>
+        <td><strong>Fields in BOTH classes:</strong><br><code>A</code> has <code>private B itsB;</code> AND <code>B</code> has <code>private A itsA;</code></td>
+        <td>
+          • <code>Courier "0..1" &lt;──&gt; "0..1" Order</code><br>(<code>itsCourier / itsCurrentOrder</code>)
+        </td>
+        <td><strong>Mutual awareness.</strong> <code>Courier</code> holds <code>itsCurrentOrder</code> to know where to drive; <code>Order</code> holds <code>itsCourier</code> so the customer can track their driver.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SLIDE 7: GROUP B - DIAMONDS (AGGREGATION VS COMPOSITION) -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>3C. "Has-A" Diamonds: Aggregation vs. Composition</h2>
+    <span class="slide-num">Slide 7 / 8</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:16%">Line Style</th>
+        <th style="width:16%">UML Name</th>
+        <th style="width:22%">Exact Java Equivalent</th>
+        <th style="width:22%">Where in Diagram</th>
+        <th style="width:24%">What to Tell Students</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>4. Empty Diamond + Solid Line</strong><br><code>◇──&gt;</code></td>
+        <td><strong>Aggregation (הכלה חלשה / שייכות)</strong></td>
+        <td><code>private List&lt;B&gt; itsBs;</code><br>where <code>B</code> is created <strong>outside</strong> and passed in (e.g., <code>registerCourier(c)</code>).</td>
+        <td>
+          • <code>Restaurant "1" ◇──&gt; "*" MenuItem</code> (<code>itsMenuItems</code>)<br>
+          • <code>DeliveryDispatcher "1" ◇──&gt; "*" Courier</code> (<code>itsFleet</code>)
+        </td>
+        <td><strong>"Whole-Part container WITHOUT lifecycle death."</strong> <code>DeliveryDispatcher</code> manages a fleet of <code>Courier</code>s. If we destroy <code>DeliveryDispatcher</code>, the <code>Courier</code> objects still survive!</td>
+      </tr>
+      <tr>
+        <td><strong>5. Solid Black Diamond + Solid Line</strong><br><code>◆──&gt;</code></td>
+        <td><strong>Composition (הכלה חזקה / בעלות מלאה)</strong></td>
+        <td><code>private List&lt;B&gt; itsBs;</code><br>where <code>B</code> is instantiated <strong>inside</strong> <code>A</code> (<code>new OrderLine(...)</code>) and never shared.</td>
+        <td>
+          • <code>Order "1" ◆──&gt; "1..*" OrderLine</code> (<code>itsOrderLines</code>)
+        </td>
+        <td><strong>"Strict Whole-Part WITH lifecycle death."</strong> <code>Order.addLine(item, qty)</code> internally creates an <code>OrderLine</code>. Exclusive to 1 <code>Order</code>. <strong>If <code>Order</code> is deleted, all its <code>OrderLine</code>s die with it.</strong></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 style="margin-top:20px;">Crucial Diamond Placement Rule:</h3>
+  <ul>
+    <li>The diamond (empty <code>◇</code> or solid <code>◆</code>) <strong>ALWAYS touches the Whole / Owner / Container</strong> (<code>Restaurant</code>, <code>DeliveryDispatcher</code>, <code>Order</code>), and the arrow points to the <strong>Part</strong> (<code>MenuItem</code>, <code>Courier</code>, <code>OrderLine</code>).</li>
+  </ul>
+</div>
+
+<!-- SLIDE 8: MULTIPLICITY & EXAM TRAPS -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>4. Reading Multiplicity & Key Design Questions</h2>
+    <span class="slide-num">Slide 8 / 8</span>
+  </div>
+  <h3>Rule: "Stand on Class A, look across the bridge to Class B, and read the number next to B."</h3>
+  <ul>
+    <li><strong><code>Order "*" ──&gt; "1" Customer</code> (<code>itsCustomer</code>):</strong>
+      <ul>
+        <li>Stand on <code>Order</code>, look at <code>Customer</code> &rarr; <code>1</code>: <em>"Every <code>Order</code> belongs to exactly <strong>1</strong> <code>Customer</code> (in field <code>itsCustomer</code>)."</em></li>
+        <li>Stand on <code>Customer</code>, look back at <code>Order</code> &rarr; <code>*</code>: <em>"A single <code>Customer</code> can place <strong>0 to many (<code>*</code>)</strong> <code>Order</code>s over time."</em> (Default if unwritten = <code>1</code>).</li>
+      </ul>
+    </li>
+    <li><strong><code>Order "1" ◆──&gt; "1..*" OrderLine</code> (<code>itsOrderLines</code>):</strong>
+      <ul>
+        <li>An <code>Order</code> must contain <strong>at least 1 (<code>1..*</code>)</strong> <code>OrderLine</code>s (no empty orders!). Every <code>OrderLine</code> belongs to <strong>exactly 1</strong> parent <code>Order</code>.</li>
+      </ul>
+    </li>
+    <li><strong><code>Courier "0..1" &lt;──&gt; "0..1" Order</code>:</strong>
+      <ul>
+        <li>Why <code>0..1</code> instead of <code>1</code>? When an <code>Order</code> is first created/cooking, it has <strong><code>0</code></strong> couriers assigned; once dispatched, it has <strong><code>1</code></strong>. An idle <code>Courier</code> has <strong><code>0</code></strong> orders; while delivering, they have <strong><code>1</code></strong>.</li>
+      </ul>
+    </li>
+    <li><strong>Why does <code>OrderLine</code> exist instead of connecting <code>Order</code> directly to <code>MenuItem</code>?</strong>
+      <ul>
+        <li><code>OrderLine</code> stores <code>quantity</code> and <code>unitPriceSnapshot</code> at the moment of purchase so future menu price changes don't corrupt past orders!</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<div class="footer-nav">Use ⬅️ ➡️ Arrow Keys or Spacebar to navigate | Press Ctrl+P to export PDF</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+  function showSlide(index) {
+    slides[current].classList.remove('active');
+    current = (index + slides.length) % slides.length;
+    slides[current].classList.add('active');
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') showSlide(current + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') showSlide(current - 1);
+  });
+</script>
+</body>
+</html>
