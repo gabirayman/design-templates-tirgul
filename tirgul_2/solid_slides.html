@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SOLID — SRP &amp; OCP</title>
+<style>
+  :root {
+    --ink: #1a2233;
+    --muted: #6b7385;
+    --line: #e4e7ee;
+    --accent: #2f5bd3;
+    --bg: #ffffff;
+    --soft: #f6f7fa;
+    --good: #12805c;
+    --good-bg: #e5f6ee;
+    --bad: #c8372d;
+    --bad-bg: #fdeceb;
+    --warn-bg: #fff6dd;
+    --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  /* ---------- slide frame ---------- */
+  .slide {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    padding: 6vh 7vw 8vh;
+    flex-direction: column;
+  }
+  .slide.active { display: flex; }
+  .kicker {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  h1 { font-size: 3.4rem; line-height: 1.1; font-weight: 700; }
+  h2 { font-size: 2.3rem; line-height: 1.2; font-weight: 700; margin-bottom: 4vh; }
+  h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+  p, li { font-size: 1.3rem; line-height: 1.55; }
+  .muted { color: var(--muted); }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+  ul.clean { list-style: none; }
+  ul.clean li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  ul.clean li:last-child { border-bottom: none; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.92em;
+    background: var(--soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* ---------- layouts ---------- */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; align-items: center; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2vw; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.4vw; }
+  .tile {
+    background: var(--soft);
+    border-radius: 12px;
+    padding: 26px 24px;
+  }
+  .tile .big { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+  .tile p { font-size: 1.1rem; color: var(--muted); }
+  .tile.bad { background: var(--bad-bg); }
+  .tile.bad .big { color: var(--bad); }
+  .tile.good { background: var(--good-bg); }
+  .tile.good .big { color: var(--good); }
+
+  .figure { display: flex; justify-content: center; align-items: center; min-height: 0; flex: 1; }
+  .figure img { max-width: 100%; max-height: 64vh; object-fit: contain; }
+  .grid-2 img { max-width: 100%; max-height: 62vh; object-fit: contain; display: block; margin: 0 auto; }
+
+  .quote {
+    font-size: 2.4rem;
+    font-weight: 600;
+    line-height: 1.3;
+    border-left: 6px solid var(--accent);
+    padding-left: 28px;
+    margin-bottom: 5vh;
+  }
+  .note {
+    margin-top: 3vh;
+    padding: 16px 22px;
+    border-radius: 10px;
+    background: var(--soft);
+    font-size: 1.2rem;
+  }
+  .note.warn { background: var(--warn-bg); }
+
+  /* ---------- SOLID letters ---------- */
+  .letters { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.4vw; }
+  .letter { border-radius: 12px; padding: 26px 20px; background: var(--soft); }
+  .letter .l { font-size: 3.6rem; font-weight: 800; color: #b9c0cf; line-height: 1; }
+  .letter .n { font-size: 1.15rem; font-weight: 700; margin-top: 10px; }
+  .letter .d { font-size: 1rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .letter.on { background: #e8eefc; }
+  .letter.on .l { color: var(--accent); }
+
+  /* ---------- responsibility check ---------- */
+  .check { width: 100%; border-collapse: collapse; }
+  .check td { padding: 14px 10px; border-bottom: 1px solid var(--line); font-size: 1.35rem; }
+  .check td.sentence { font-family: var(--mono); font-size: 1.2rem; }
+  .check td.sentence b { color: var(--accent); font-weight: 600; }
+  .check td.verdict { width: 200px; font-weight: 700; }
+  .check td.home { width: 34%; color: var(--muted); font-size: 1.15rem; }
+  .verdict .v, .home .v { visibility: hidden; }
+  .revealed .v { visibility: visible; }
+  .yes { color: var(--good); }
+  .no { color: var(--bad); }
+
+  /* ---------- code ---------- */
+  pre {
+    background: #182033;
+    color: #e8ebf2;
+    border-radius: 12px;
+    padding: 22px 26px;
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    line-height: 1.55;
+    overflow: hidden;
+  }
+  pre .r { background: var(--bad); color: #fff; display: block; margin: 0 -26px; padding: 0 26px; }
+  pre .g { background: var(--good); color: #fff; display: block; margin: 0 -26px; padding: 0 26px; }
+  pre .c { color: #8e98ad; }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .tag.bad { background: var(--bad-bg); color: var(--bad); }
+  .tag.good { background: var(--good-bg); color: var(--good); }
+
+  .counter {
+    position: fixed;
+    bottom: 3vh;
+    right: 3vw;
+    font-size: 0.95rem;
+    color: #a3aabb;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media print {
+    body { overflow: visible; }
+    .slide { display: flex !important; page-break-after: always; }
+    .v { visibility: visible !important; }
+    .counter { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1 · TITLE -->
+<div class="slide active">
+  <div class="body">
+    <div class="kicker">BiteExpress · Recitation 2</div>
+    <h1>SOLID</h1>
+    <p class="muted" style="font-size:1.6rem; margin-top:14px">Designing code that survives change</p>
+    <p style="margin-top:6vh">Today: <b>S</b>ingle Responsibility &nbsp;·&nbsp; <b>O</b>pen / Closed</p>
+  </div>
+</div>
+
+<!-- 2 · SOLID INTRO -->
+<div class="slide">
+  <div class="kicker">Introduction</div>
+  <h2>Five principles for class design</h2>
+  <div class="body">
+    <div class="letters">
+      <div class="letter on"><div class="l">S</div><div class="n">Single Responsibility</div><div class="d">One reason to change</div></div>
+      <div class="letter on"><div class="l">O</div><div class="n">Open / Closed</div><div class="d">Extend without modifying</div></div>
+      <div class="letter"><div class="l">L</div><div class="n">Liskov Substitution</div><div class="d">Subclasses can replace their parent</div></div>
+      <div class="letter"><div class="l">I</div><div class="n">Interface Segregation</div><div class="d">No unused methods forced on clients</div></div>
+      <div class="letter"><div class="l">D</div><div class="n">Dependency Inversion</div><div class="d">Depend on abstractions</div></div>
+    </div>
+    <p class="note">The real test of a design is not "does it work today?" but <b>"what happens when the requirements change?"</b></p>
+  </div>
+</div>
+
+<!-- 3 · BAD DESIGN -->
+<div class="slide">
+  <div class="kicker">Introduction</div>
+  <h2>Signs of bad design</h2>
+  <div class="body">
+    <div class="grid-3">
+      <div class="tile bad">
+        <div class="big">Rigidity</div>
+        <p>One change forces changes in many other places.</p>
+      </div>
+      <div class="tile bad">
+        <div class="big">Fragility</div>
+        <p>One change breaks something that seemed unrelated.</p>
+      </div>
+      <div class="tile bad">
+        <div class="big">Immobility</div>
+        <p>A module can't be reused elsewhere — it's tailored to one app.</p>
+      </div>
+    </div>
+    <p class="note">The root cause: <b>wrong dependencies</b> between classes.</p>
+  </div>
+</div>
+
+<!-- 4 · GOOD DESIGN -->
+<div class="slide">
+  <div class="kicker">Introduction</div>
+  <h2>What good design gives us</h2>
+  <div class="body">
+    <div class="grid-5">
+      <div class="tile good"><div class="big">Maintain&shy;ability</div><p>Easy to keep working over time</p></div>
+      <div class="tile good"><div class="big">Test&shy;ability</div><p>Small parts, tested in isolation</p></div>
+      <div class="tile good"><div class="big">Flexibility</div><p>New features without rewrites</p></div>
+      <div class="tile good"><div class="big">Parallel work</div><p>Teams don't edit the same files</p></div>
+      <div class="tile good"><div class="big">Loose coupling</div><p>Few dependencies between modules</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 5 · SRP INTRO -->
+<div class="slide">
+  <div class="kicker">S · Single Responsibility</div>
+  <h2>Single Responsibility Principle</h2>
+  <div class="body">
+    <div class="quote">A class should have only one reason to change.</div>
+    <ul class="clean">
+      <li>Each class owns <b>one</b> part of the system's functionality.</li>
+      <li>The question to ask: <b>who or what could force me to edit this class?</b></li>
+      <li>More than one answer → more than one responsibility.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 6 · BLOATED ORDER SERVICE -->
+<div class="slide">
+  <div class="kicker">S · Single Responsibility</div>
+  <h2>A bloated <code>OrderService</code></h2>
+  <div class="grid-2" style="flex:1">
+    <img src="srp_bad.png" alt="srp_bad.png">
+    <div>
+      <h3>Reasons this class would change</h3>
+      <ul class="clean">
+        <li>Coupon rules change</li>
+        <li>New SMS provider</li>
+        <li>New log format</li>
+        <li>New receipt layout</li>
+        <li>New database</li>
+      </ul>
+      <p class="note warn">Every one of these edits risks breaking <code>placeOrder()</code>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 7 · RESPONSIBILITY CHECK: ORDER SERVICE  (↓ reveals) -->
+<div class="slide" data-reveal>
+  <div class="kicker">S · Single Responsibility</div>
+  <h2>Is it really its job?</h2>
+  <p class="muted" style="margin-top:-2vh; margin-bottom:3vh">Read each method as a sentence: <code>The [class] [does X] itself.</code></p>
+  <table class="check">
+    <tr><td class="sentence">The <b>OrderService</b> places orders itself.</td>
+        <td class="verdict"><span class="v yes">✔ Follows</span></td><td class="home"><span class="v">Stays — coordinating is its job</span></td></tr>
+    <tr><td class="sentence">The <b>OrderService</b> calculates the total itself.</td>
+        <td class="verdict"><span class="v no">✘ Violates</span></td><td class="home"><span class="v">→ <code>Order</code></span></td></tr>
+    <tr><td class="sentence">The <b>OrderService</b> applies coupons itself.</td>
+        <td class="verdict"><span class="v no">✘ Violates</span></td><td class="home"><span class="v">→ <code>CouponService</code></span></td></tr>
+    <tr><td class="sentence">The <b>OrderService</b> sends SMS itself.</td>
+        <td class="verdict"><span class="v no">✘ Violates</span></td><td class="home"><span class="v">→ <code>Notifier</code></span></td></tr>
+    <tr><td class="sentence">The <b>OrderService</b> logs errors itself.</td>
+        <td class="verdict"><span class="v no">✘ Violates</span></td><td class="home"><span class="v">→ <code>Logger</code></span></td></tr>
+    <tr><td class="sentence">The <b>OrderService</b> prints receipts itself.</td>
+        <td class="verdict"><span class="v no">✘ Violates</span></td><td class="home"><span class="v">→ <code>ReceiptPrinter</code></span></td></tr>
+    <tr><td class="sentence">The <b>OrderService</b> saves to the database itself.</td>
+        <td class="verdict"><span class="v no">✘ Violates</span></td><td class="home"><span class="v">→ <code>OrderRepository</code></span></td></tr>
+  </table>
+</div>
+
+<!-- 8 · SRP FIXED -->
+<div class="slide">
+  <div class="kicker">S · Single Responsibility</div>
+  <h2>After the split</h2>
+  <div class="figure"><img src="srp_good.png" alt="srp_good.png"></div>
+  <p class="note"><code>OrderService</code> still <b>uses</b> these classes, but no longer <b>implements</b> them. A new SMS provider changes <code>Notifier</code> only.</p>
+</div>
+
+<!-- 9 · AUDIT OUR DIAGRAM -->
+<div class="slide">
+  <div class="kicker">S · Auditing our design</div>
+  <h2>Does our own design pass?</h2>
+  <div class="grid-2" style="grid-template-columns: 1.7fr 1fr; flex:1">
+    <img src="class_diagram.png" alt="class_diagram.png">
+    <div>
+      <p class="muted">Last week's BiteExpress diagram.</p>
+      <p style="margin-top:2vh">Look closely at:</p>
+      <p style="font-size:1.8rem; margin-top:1vh"><code>User.login(password)</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- 10 · RESPONSIBILITY CHECK: USER  (↓ reveals) -->
+<div class="slide" data-reveal>
+  <div class="kicker">S · Auditing our design</div>
+  <h2>Is it really the <code>User</code>'s job?</h2>
+  <div class="body">
+    <table class="check">
+      <tr><td class="sentence">The <b>User</b> gets its name itself.</td>
+          <td class="verdict"><span class="v yes">✔ Follows</span></td><td class="home"><span class="v">Its own data</span></td></tr>
+      <tr><td class="sentence">The <b>User</b> logs in itself.</td>
+          <td class="verdict"><span class="v no">✘ Violates</span></td><td class="home"><span class="v">Authentication is a separate job</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- 11 · REASONS USER WOULD CHANGE -->
+<div class="slide">
+  <div class="kicker">S · Auditing our design</div>
+  <h2>Why <code>User</code> would keep changing</h2>
+  <div class="grid-2" style="flex:1">
+    <img src="user_before.png" alt="user_before.png">
+    <div>
+      <h3>Each of these edits <code>User</code>:</h3>
+      <ul class="clean">
+        <li>A new password-hashing algorithm</li>
+        <li>Login with Google or an SMS code</li>
+        <li>Two-factor authentication</li>
+        <li>Locking the account after failed attempts</li>
+      </ul>
+      <p class="note warn"><code>User</code> is the parent of <code>Customer</code> and <code>Courier</code> — every security change ripples into both.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 12 · USER FIXED -->
+<div class="slide">
+  <div class="kicker">S · Auditing our design</div>
+  <h2>Separate identity from authentication</h2>
+  <div class="grid-2" style="flex:1">
+    <img src="user_after.png" alt="user_after.png">
+<pre>public abstract class User {
+    protected String userId, name, phone;
+    public String getUserId() { return userId; }
+    public String getName()   { return name; }
+}
+
+<span class="g">public class AuthService {</span><span class="g">    private Map&lt;String, String&gt; passwordHashes;</span><span class="g"> </span><span class="g">    public boolean login(User user, String pw) {</span><span class="g">        String stored =</span><span class="g">            passwordHashes.get(user.getUserId());</span><span class="g">        return stored != null</span><span class="g">            &amp;&amp; stored.equals(hash(pw));</span><span class="g">    }</span><span class="g">}</span></pre>
+  </div>
+  <p class="note">Login changes now touch <code>AuthService</code> only. <code>User</code>, <code>Customer</code> and <code>Courier</code> stay untouched.</p>
+</div>
+
+<!-- 13 · CALCULATE ETA -->
+<div class="slide">
+  <div class="kicker">S · Auditing our design</div>
+  <h2>A judgment call: <code>Courier.calculateETA()</code></h2>
+  <p class="muted" style="margin-top:-2vh; margin-bottom:4vh; font-family:var(--mono)">The Courier calculates its ETA itself?</p>
+  <div class="grid-2" style="align-items:stretch">
+    <div class="tile good">
+      <div class="big">For</div>
+      <ul class="clean">
+        <li>The courier knows its own vehicle and speed</li>
+        <li>Bikes and cars genuinely compute ETA differently</li>
+      </ul>
+    </div>
+    <div class="tile bad">
+      <div class="big">Against</div>
+      <ul class="clean">
+        <li>Real ETA also depends on traffic</li>
+        <li>Routing is not the courier's knowledge</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 14 · OCP INTRO -->
+<div class="slide">
+  <div class="kicker">O · Open / Closed</div>
+  <h2>Open / Closed Principle</h2>
+  <div class="body">
+    <div class="quote">Open for extension, closed for modification.</div>
+    <div class="grid-2" style="align-items:stretch">
+      <div class="tile good"><div class="big">Open</div><p>We can add new behavior to the system.</p></div>
+      <div class="tile bad"><div class="big">Closed</div><p>…without editing code that already works.</p></div>
+    </div>
+    <p class="note">The key is <b>abstraction</b>: new behavior arrives as a <b>new class</b> behind an interface.</p>
+  </div>
+</div>
+
+<!-- 15 · PAYMENT BAD -->
+<div class="slide">
+  <div class="kicker">O · New requirement: PayPal</div>
+  <h2>Depending on concrete classes</h2>
+  <div class="grid-2" style="flex:1">
+    <img src="pay_bad.png" alt="pay_bad.png">
+    <div>
+      <span class="tag bad">Modified</span>
+<pre>class OrderService {
+    private StripeGateway stripe;
+<span class="r">    private PayPalGateway paypal;</span>    Order placeOrder(..., String method) {
+        if (method.equals("STRIPE"))
+            stripe.charge(total);
+<span class="r">        else if (method.equals("PAYPAL"))</span><span class="r">            paypal.pay(total);</span>    }
+}</pre>
+      <p class="note warn">Every new payment method edits <code>OrderService</code> again.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 16 · PAYMENT GOOD -->
+<div class="slide">
+  <div class="kicker">O · New requirement: PayPal</div>
+  <h2>Depending on an abstraction</h2>
+  <div class="grid-2" style="flex:1">
+    <img src="pay_good.png" alt="pay_good.png">
+    <div>
+      <span class="tag good">Only added</span>
+<pre>class OrderService {
+    Order placeOrder(..., PaymentGateway gw) {
+        gw.charge(total);   <span class="c">// any gateway</span>
+    }
+}
+
+<span class="g">class ApplePayGateway implements PaymentGateway {</span><span class="g">    public boolean charge(double amount) { ... }</span><span class="g">    public boolean refund(String id)     { ... }</span><span class="g">}</span></pre>
+      <p class="note">A new payment method is one new class. <code>OrderService</code> never changes.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 17 · DRONE BAD -->
+<div class="slide">
+  <div class="kicker">O · New requirement: drone delivery</div>
+  <h2>Type checks everywhere</h2>
+  <div class="grid-2" style="flex:1">
+<pre><span class="c">// DeliveryDispatcher</span>
+for (Courier c : itsFleet) {
+    double d = distance(c, rest);
+    int eta;
+<span class="r">    if (c instanceof BikeCourier)</span><span class="r">        eta = (int)(d / 15 * 60);</span><span class="r">    else if (c instanceof CarCourier)</span><span class="r">        eta = (int)(d / 30 * 60) + 5;</span>    if (eta &lt; bestEta) { best = c; bestEta = eta; }
+}
+
+<span class="c">// EtaDisplay — the same chain, copied</span>
+<span class="r">if (c instanceof BikeCourier) ...</span><span class="r">else if (c instanceof CarCourier) ...</span></pre>
+    <div>
+      <h3>To add drones, we must edit:</h3>
+      <ul class="clean">
+        <li><code>DeliveryDispatcher</code> — a new <code>else if</code></li>
+        <li><code>EtaDisplay</code> — the same <code>else if</code> again</li>
+        <li>…and every other copy of this chain</li>
+      </ul>
+      <p class="note warn">Miss one, and the app breaks on drones.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 18 · DRONE GOOD -->
+<div class="slide">
+  <div class="kicker">O · New requirement: drone delivery</div>
+  <h2>Let each courier answer for itself</h2>
+  <div class="grid-2" style="flex:1">
+    <img src="drone_good.png" alt="drone_good.png">
+    <div>
+<pre><span class="c">// DeliveryDispatcher — unchanged forever</span>
+for (Courier c : itsFleet) {
+    int eta = c.calculateETA(distance(c, rest));
+    if (eta &lt; bestEta) { best = c; bestEta = eta; }
+}
+
+<span class="g">class DroneCourier extends Courier {</span><span class="g">    public int calculateETA(double km) {</span><span class="g">        return (int)km + 2;   // + takeoff</span><span class="g">    }</span><span class="g">}</span></pre>
+      <p class="note">The <code>instanceof</code> chain became one polymorphic call. Drones are one new class.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 19 · CLOSED AGAINST WHAT -->
+<div class="slide">
+  <div class="kicker">O · Open / Closed</div>
+  <h2>Closed against <em>what</em>?</h2>
+  <div class="body">
+<pre style="max-width:760px">static void giveBikeBonus(Courier[] fleet) {
+    for (Courier c : fleet)
+        if (c instanceof BikeCourier)
+            c.addBonus(10);
+}</pre>
+    <div class="grid-2" style="margin-top:4vh; align-items:stretch">
+      <div class="tile good"><div class="big">“Add drone couriers”</div><p>No edit needed — closed against this change.</p></div>
+      <div class="tile bad"><div class="big">“Cars get the bonus too”</div><p>Must edit the method — not closed against this one.</p></div>
+    </div>
+    <p class="note">No design is closed against every change. We choose which changes to protect against.</p>
+  </div>
+</div>
+
+<!-- 20 · FULL NEW DIAGRAM -->
+<div class="slide">
+  <div class="kicker">BiteExpress after today</div>
+  <h2>The new class diagram</h2>
+  <div class="figure"><img src="full_after.png" style="max-height:66vh" alt="full_after.png"></div>
+  <p class="note" style="margin-top:2vh">
+    <span style="background:#c8f7c5; padding:2px 10px; border-radius:4px; font-weight:700">Green</span> added: <code>AuthService</code>, <code>ApplePayGateway</code>, <code>DroneCourier</code>
+    &nbsp;&nbsp;·&nbsp;&nbsp;
+    <span style="background:#fff3b0; padding:2px 10px; border-radius:4px; font-weight:700">Yellow</span> refactored: <code>User</code>
+  </p>
+</div>
+
+<!-- 21 · LSP TEASER -->
+<div class="slide">
+  <div class="kicker">Next time</div>
+  <h2>…but what did the drone inherit?</h2>
+  <div class="grid-2" style="flex:1">
+    <img src="lsp_teaser.png" alt="lsp_teaser.png">
+    <div>
+      <p style="font-family:var(--mono); font-size:1.15rem">DroneCourier → Courier → User</p>
+      <ul class="clean" style="margin-top:2vh">
+        <li>A drone now has a <b>name</b> and a <b>phone</b></li>
+        <li><code>AuthService</code> accepts any <code>User</code> — including a drone</li>
+      </ul>
+      <p class="quote" style="font-size:1.8rem; margin-top:5vh; margin-bottom:0">A drone is a courier,<br>but it is not a user.</p>
+      <p class="muted" style="margin-top:3vh">That's the <b>L</b> in SOLID.</p>
+    </div>
+  </div>
+</div>
+
+<div class="counter"></div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const counter = document.querySelector('.counter');
+  let current = 0;
+
+  function show(i) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides[current].classList.add('active');
+    counter.textContent = `${current + 1} / ${slides.length}`;
+  }
+
+  // ↓ reveals the next row's verdict, ↑ hides the last one (only on slides marked data-reveal)
+  function reveal(step) {
+    const s = slides[current];
+    if (!s.hasAttribute('data-reveal')) return;
+    const rows = [...s.querySelectorAll('.check tr')];
+    if (step > 0) {
+      const next = rows.find(r => !r.classList.contains('revealed'));
+      if (next) next.classList.add('revealed');
+    } else {
+      const shown = rows.filter(r => r.classList.contains('revealed'));
+      if (shown.length) shown[shown.length - 1].classList.remove('revealed');
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); show(current + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   { e.preventDefault(); show(current - 1); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); reveal(1); }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); reveal(-1); }
+  });
+
+  show(0);
+</script>
+</body>
+</html>
