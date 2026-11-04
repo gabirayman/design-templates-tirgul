@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOLID — Liskov Substitution</title>
+<style>
+  :root {
+    --ink: #1a2233;
+    --muted: #6b7385;
+    --line: #e4e7ee;
+    --accent: #2f5bd3;
+    --bg: #ffffff;
+    --soft: #f6f7fa;
+    --good: #12805c;
+    --good-bg: #e5f6ee;
+    --bad: #c8372d;
+    --bad-bg: #fdeceb;
+    --warn-bg: #fff6dd;
+    --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  /* ---------- slide frame ---------- */
+  .slide {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    padding: 6vh 7vw 8vh;
+    flex-direction: column;
+  }
+  .slide.active { display: flex; }
+  .kicker {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  h1 { font-size: 3.4rem; line-height: 1.1; font-weight: 700; }
+  h2 { font-size: 2.3rem; line-height: 1.2; font-weight: 700; margin-bottom: 4vh; }
+  h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+  p, li { font-size: 1.3rem; line-height: 1.55; }
+  .muted { color: var(--muted); }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+  ul.clean { list-style: none; }
+  ul.clean li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  ul.clean li:last-child { border-bottom: none; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.92em;
+    background: var(--soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* ---------- layouts ---------- */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; align-items: center; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2vw; }
+  .tile {
+    background: var(--soft);
+    border-radius: 12px;
+    padding: 26px 24px;
+  }
+  .tile .big { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+  .tile p { font-size: 1.1rem; color: var(--muted); }
+  .tile.bad { background: var(--bad-bg); }
+  .tile.bad .big { color: var(--bad); }
+  .tile.good { background: var(--good-bg); }
+  .tile.good .big { color: var(--good); }
+  .tile pre { margin-top: 14px; font-size: 0.98rem; padding: 16px 18px; }
+
+  .figure { display: flex; justify-content: center; align-items: center; min-height: 0; flex: 1; }
+  .figure svg { width: 100%; height: 100%; max-height: 68vh; }
+  .grid-2 svg { width: 100%; max-height: 70vh; display: block; margin: 0 auto; }
+
+  .quote {
+    font-size: 2.4rem;
+    font-weight: 600;
+    line-height: 1.3;
+    border-left: 6px solid var(--accent);
+    padding-left: 28px;
+    margin-bottom: 5vh;
+  }
+  .note {
+    margin-top: 3vh;
+    padding: 16px 22px;
+    border-radius: 10px;
+    background: var(--soft);
+    font-size: 1.2rem;
+  }
+  .note.warn { background: var(--warn-bg); }
+  .note.bad { background: var(--bad-bg); }
+  .note.good { background: var(--good-bg); }
+
+  /* ---------- SOLID letters ---------- */
+  .letters { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.4vw; }
+  .letter { border-radius: 12px; padding: 26px 20px; background: var(--soft); }
+  .letter .l { font-size: 3.6rem; font-weight: 800; color: #b9c0cf; line-height: 1; }
+  .letter .n { font-size: 1.15rem; font-weight: 700; margin-top: 10px; }
+  .letter .d { font-size: 1rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .letter.on { background: #e8eefc; }
+  .letter.on .l { color: var(--accent); }
+  .letter.done .l { color: #8fa3d6; }
+
+  /* ---------- tables ---------- */
+  .check { width: 100%; border-collapse: collapse; }
+  .check th { text-align: left; font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 10px 10px; border-bottom: 2px solid var(--line); }
+  .check td { padding: 16px 10px; border-bottom: 1px solid var(--line); font-size: 1.3rem; }
+  .check td.mono { font-family: var(--mono); font-size: 1.15rem; }
+  .yes { color: var(--good); font-weight: 700; }
+  .no { color: var(--bad); font-weight: 700; }
+
+  /* ---------- contract boxes ---------- */
+  .contract { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2vw; }
+  .contract .tile .he { font-size: 1.15rem; color: var(--muted); margin-bottom: 14px; direction: rtl; text-align: left; }
+  .contract .tile .who { margin-top: 14px; font-size: 1.05rem; font-weight: 700; color: var(--accent); }
+
+  /* ---------- code ---------- */
+  pre {
+    background: #182033;
+    color: #e8ebf2;
+    border-radius: 12px;
+    padding: 22px 26px;
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    line-height: 1.55;
+    overflow: hidden;
+  }
+  pre .r { background: var(--bad); color: #fff; display: block; margin: 0 -26px; padding: 0 26px; }
+  pre .g { background: var(--good); color: #fff; display: block; margin: 0 -26px; padding: 0 26px; }
+  pre .c { color: #8e98ad; }
+  .tile pre .r, .tile pre .g { margin: 0 -18px; padding: 0 18px; }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .tag.bad { background: var(--bad-bg); color: var(--bad); }
+  .tag.good { background: var(--good-bg); color: var(--good); }
+
+  /* ---------- flow (step list) ---------- */
+  .flow { list-style: none; counter-reset: step; }
+  .flow li { counter-increment: step; padding: 10px 0 10px 52px; position: relative; border-bottom: 1px solid var(--line); }
+  .flow li:last-child { border-bottom: none; }
+  .flow li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 10px;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--soft); color: var(--accent);
+    font-weight: 700; font-size: 1.05rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .flow li.boom::before { background: var(--bad); color: #fff; content: "✘"; }
+
+  .screen {
+    border: 2px solid var(--line);
+    border-radius: 18px;
+    padding: 22px 26px;
+    max-width: 380px;
+    font-size: 1.25rem;
+  }
+  .screen .app { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .screen .msg { font-size: 1.7rem; font-weight: 700; }
+  .screen .msg .bad { color: var(--bad); }
+
+  .divider h1 { font-size: 3rem; }
+  .divider .num { font-size: 1.1rem; font-weight: 700; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px; }
+
+  .legend span.sw { padding: 2px 10px; border-radius: 4px; font-weight: 700; }
+
+  .counter {
+    position: fixed;
+    bottom: 3vh;
+    right: 3vw;
+    font-size: 0.95rem;
+    color: #a3aabb;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media print {
+    body { overflow: visible; }
+    .slide { display: flex !important; page-break-after: always; }
+    .counter { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1 · TITLE -->
+<div class="slide active">
+  <div class="body">
+    <div class="kicker">BiteExpress · Recitation 3</div>
+    <h1>Liskov Substitution</h1>
+    <p class="muted" style="font-size:1.6rem; margin-top:14px">Can the child really replace the parent?</p>
+    <p style="margin-top:6vh">Today: the drone problem &nbsp;·&nbsp; contracts &nbsp;·&nbsp; the bike problem</p>
+  </div>
+</div>
+
+<!-- 2 · SOLID -->
+<div class="slide">
+  <div class="kicker">SOLID</div>
+  <h2>Where we are</h2>
+  <div class="body">
+    <div class="letters">
+      <div class="letter done"><div class="l">S</div><div class="n">Single Responsibility</div><div class="d">One reason to change</div></div>
+      <div class="letter done"><div class="l">O</div><div class="n">Open / Closed</div><div class="d">Extend without modifying</div></div>
+      <div class="letter on"><div class="l">L</div><div class="n">Liskov Substitution</div><div class="d">Subclasses can replace their parent</div></div>
+      <div class="letter"><div class="l">I</div><div class="n">Interface Segregation</div><div class="d">No unused methods forced on clients</div></div>
+      <div class="letter"><div class="l">D</div><div class="n">Dependency Inversion</div><div class="d">Depend on abstractions</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 3 · DEFINITION -->
+<div class="slide">
+  <div class="kicker">L · Liskov Substitution</div>
+  <h2>The principle</h2>
+  <div class="body">
+    <div class="quote">Code that works with a parent must keep working with any child — without knowing which child it got.</div>
+    <div class="grid-2" style="align-items:stretch">
+      <div class="tile bad"><div class="big">Not enough</div><p>"In real life, X is a kind of Y."<br>Same method names.</p></div>
+      <div class="tile good"><div class="big">What counts</div><p>The child keeps <b>every promise</b> the parent makes.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 4 · FAKE TEST -->
+<div class="slide">
+  <div class="kicker">L · Liskov Substitution</div>
+  <h2>The "fake" test</h2>
+  <div class="body">
+    <pre style="font-size:1.4rem; max-width:900px">Parent p = new Child();   <span class="c">// I promised you a Parent</span>
+useAsParent(p);           <span class="c">// call any Parent methods you like</span></pre>
+    <div class="grid-2" style="margin-top:5vh; align-items:stretch">
+      <div class="tile bad"><div class="big">You can tell</div><p>It behaves differently from what a Parent promises → it's a fake.</p></div>
+      <div class="tile good"><div class="big">You can't tell</div><p>No test can catch it → it's a real subtype.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 5 · DIVIDER: DRONE -->
+<div class="slide divider">
+  <div class="body">
+    <div class="num">Part 1</div>
+    <h1>The drone problem</h1>
+    <p class="muted" style="font-size:1.5rem; margin-top:14px">A drone is a courier — but is it a user?</p>
+  </div>
+</div>
+
+<!-- 6 · RECAP DIAGRAM -->
+<div class="slide">
+  <div class="kicker">Part 1 · The drone problem</div>
+  <h2>Last time: drones were one new class</h2>
+  <div class="grid-2" style="grid-template-columns: 1.7fr 1fr; flex:1">
+    <svg preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" version="1.1" viewBox="0 0 905 565" zoomAndPan="magnify"><defs/><g><!--class User--><g id="elem_User"><rect codeLine="2" fill="#F1F1F1" height="130.6973" id="User" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="141.9033" x="241" y="122"/><ellipse cx="292.3862" cy="137" fill="#A9DCDF" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M292.105,133.1406 L291.1519,137.3125 L293.0581,137.3125 L292.105,133.1406 Z M290.8706,131.2969 L293.3394,131.2969 L296.0894,141.5 L294.0737,141.5 L293.4487,138.9844 L290.7456,138.9844 L290.1362,141.5 L288.105,141.5 L290.8706,131.2969 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="31.1309" x="311.3862" y="142.0928">User</text><line style="stroke:#555555;stroke-width:0.5;" x1="242" x2="381.9033" y1="152" y2="152"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="97.3506" x="247" y="169.5625">#userId: String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="92.4766" x="247" y="186.502">#name: String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="97.5967" x="247" y="203.4414">#phone: String</text><line style="stroke:#555555;stroke-width:0.5;" x1="242" x2="381.9033" y1="210.8184" y2="210.8184"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="126.6904" x="247" y="228.3809">+getName(): String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="129.9033" x="247" y="245.3203">+getPhone(): String</text></g><!--class AuthService--><g id="elem_AuthService"><rect codeLine="9" fill="#F1F1F1" height="54.9395" id="AuthService" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="267.8896" x="178" y="7"/><ellipse cx="267.6299" cy="22" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M270.0205,26.7031 Q269.5361,26.9531 269.0049,27.0781 Q268.4893,27.2031 267.9111,27.2031 Q265.8486,27.2031 264.7549,25.8438 Q263.6768,24.4844 263.6768,21.9063 Q263.6768,19.3281 264.7549,17.9688 Q265.8486,16.6094 267.9111,16.6094 Q268.4893,16.6094 269.0205,16.7344 Q269.5518,16.8594 270.0205,17.0938 L270.0205,19.3438 Q269.5049,18.8594 269.0049,18.6406 Q268.5205,18.4219 268.0049,18.4219 Q266.8955,18.4219 266.333,19.2969 Q265.7705,20.1719 265.7705,21.9063 Q265.7705,23.625 266.333,24.5156 Q266.8955,25.3906 268.0049,25.3906 Q268.5205,25.3906 269.0049,25.1719 Q269.5049,24.9375 270.0205,24.4688 L270.0205,26.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="80.6299" x="286.6299" y="27.0928">AuthService</text><line style="stroke:#555555;stroke-width:0.5;" x1="179" x2="444.8896" y1="37" y2="37"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="255.8896" x="184" y="54.5625">+login(user: User, pw: String): boolean</text></g><!--class Customer--><g id="elem_Customer"><rect codeLine="12" fill="#F1F1F1" height="54.9395" id="Customer" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="173.1914" x="84.5" y="351"/><ellipse cx="134.813" cy="366" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M137.2036,370.7031 Q136.7192,370.9531 136.188,371.0781 Q135.6724,371.2031 135.0942,371.2031 Q133.0317,371.2031 131.938,369.8438 Q130.8599,368.4844 130.8599,365.9063 Q130.8599,363.3281 131.938,361.9688 Q133.0317,360.6094 135.0942,360.6094 Q135.6724,360.6094 136.2036,360.7344 Q136.7349,360.8594 137.2036,361.0938 L137.2036,363.3438 Q136.688,362.8594 136.188,362.6406 Q135.7036,362.4219 135.188,362.4219 Q134.0786,362.4219 133.5161,363.2969 Q132.9536,364.1719 132.9536,365.9063 Q132.9536,367.625 133.5161,368.5156 Q134.0786,369.3906 135.188,369.3906 Q135.7036,369.3906 136.188,369.1719 Q136.688,368.9375 137.2036,368.4688 L137.2036,370.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="64.5654" x="153.813" y="371.0928">Customer</text><line style="stroke:#555555;stroke-width:0.5;" x1="85.5" x2="256.6914" y1="381" y2="381"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="161.1914" x="90.5" y="398.5625">-deliveryAddress: String</text></g><!--class Courier--><g id="elem_Courier"><rect codeLine="15" fill="#F1F1F1" height="130.6973" id="Courier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="321.0459" x="292.5" y="313"/><ellipse cx="424.564" cy="328" fill="#A9DCDF" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M424.2827,324.1406 L423.3296,328.3125 L425.2358,328.3125 L424.2827,324.1406 Z M423.0483,322.2969 L425.5171,322.2969 L428.2671,332.5 L426.2515,332.5 L425.6265,329.9844 L422.9233,329.9844 L422.314,332.5 L420.2827,332.5 L423.0483,322.2969 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="48.918" x="443.564" y="333.0928">Courier</text><line style="stroke:#555555;stroke-width:0.5;" x1="293.5" x2="612.5459" y1="343" y2="343"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="130.3955" x="298.5" y="360.5625">#currentLat: double</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="134.6201" x="298.5" y="377.502">#currentLon: double</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="140.8203" x="298.5" y="394.4414">#isAvailable: boolean</text><line style="stroke:#555555;stroke-width:0.5;" x1="293.5" x2="612.5459" y1="401.8184" y2="401.8184"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="309.0459" x="298.5" y="419.3809">+updateLocation(lat: double, lon: double): void</text><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="263.5869" x="298.5" y="436.3203">+calculateETA(distanceKm: double): int</text></g><!--class BikeCourier--><g id="elem_BikeCourier"><rect codeLine="22" fill="#F1F1F1" height="54.9395" id="BikeCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="273.5566" x="7" y="504"/><ellipse cx="101.0835" cy="519" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M103.4741,523.7031 Q102.9897,523.9531 102.4585,524.0781 Q101.9429,524.2031 101.3647,524.2031 Q99.3022,524.2031 98.2085,522.8438 Q97.1304,521.4844 97.1304,518.9063 Q97.1304,516.3281 98.2085,514.9688 Q99.3022,513.6094 101.3647,513.6094 Q101.9429,513.6094 102.4741,513.7344 Q103.0054,513.8594 103.4741,514.0938 L103.4741,516.3438 Q102.9585,515.8594 102.4585,515.6406 Q101.9741,515.4219 101.4585,515.4219 Q100.3491,515.4219 99.7866,516.2969 Q99.2241,517.1719 99.2241,518.9063 Q99.2241,520.625 99.7866,521.5156 Q100.3491,522.3906 101.4585,522.3906 Q101.9741,522.3906 102.4585,522.1719 Q102.9585,521.9375 103.4741,521.4688 L103.4741,523.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="77.3896" x="120.0835" y="524.0928">BikeCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="8" x2="279.5566" y1="534" y2="534"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="261.5566" x="13" y="551.5625">+calculateETA(distanceKm: double): int</text></g><!--class CarCourier--><g id="elem_CarCourier"><rect codeLine="25" fill="#F1F1F1" height="54.9395" id="CarCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="273.5566" x="316" y="504"/><ellipse cx="412.6025" cy="519" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M414.9932,523.7031 Q414.5088,523.9531 413.9775,524.0781 Q413.4619,524.2031 412.8838,524.2031 Q410.8213,524.2031 409.7275,522.8438 Q408.6494,521.4844 408.6494,518.9063 Q408.6494,516.3281 409.7275,514.9688 Q410.8213,513.6094 412.8838,513.6094 Q413.4619,513.6094 413.9932,513.7344 Q414.5244,513.8594 414.9932,514.0938 L414.9932,516.3438 Q414.4775,515.8594 413.9775,515.6406 Q413.4932,515.4219 412.9775,515.4219 Q411.8682,515.4219 411.3057,516.2969 Q410.7432,517.1719 410.7432,518.9063 Q410.7432,520.625 411.3057,521.5156 Q411.8682,522.3906 412.9775,522.3906 Q413.4932,522.3906 413.9775,522.1719 Q414.4775,521.9375 414.9932,521.4688 L414.9932,523.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="72.3516" x="431.6025" y="524.0928">CarCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="317" x2="588.5566" y1="534" y2="534"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="261.5566" x="322" y="551.5625">+calculateETA(distanceKm: double): int</text></g><!--class DroneCourier--><g id="elem_DroneCourier"><rect codeLine="28" fill="#FDECEB" height="54.9395" id="DroneCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="273.5566" x="625" y="504"/><ellipse cx="713.1807" cy="519" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M715.5713,523.7031 Q715.0869,523.9531 714.5557,524.0781 Q714.04,524.2031 713.4619,524.2031 Q711.3994,524.2031 710.3057,522.8438 Q709.2275,521.4844 709.2275,518.9063 Q709.2275,516.3281 710.3057,514.9688 Q711.3994,513.6094 713.4619,513.6094 Q714.04,513.6094 714.5713,513.7344 Q715.1025,513.8594 715.5713,514.0938 L715.5713,516.3438 Q715.0557,515.8594 714.5557,515.6406 Q714.0713,515.4219 713.5557,515.4219 Q712.4463,515.4219 711.8838,516.2969 Q711.3213,517.1719 711.3213,518.9063 Q711.3213,520.625 711.8838,521.5156 Q712.4463,522.3906 713.5557,522.3906 Q714.0713,522.3906 714.5557,522.1719 Q715.0557,521.9375 715.5713,521.4688 L715.5713,523.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="89.1953" x="732.1807" y="524.0928">DroneCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="626" x2="897.5566" y1="534" y2="534"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="261.5566" x="631" y="551.5625">+calculateETA(distanceKm: double): int</text></g><!--link AuthService to User--><g id="link_AuthService_User"><path codeLine="31" d="M312,62.15 C312,78.74 312,94.86 312,115.83 " fill="none" id="AuthService-to-User" style="stroke:#444444;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="#444444" points="312,121.83,316,112.83,312,116.83,308,112.83,312,121.83" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link User to Customer--><g id="link_User_Customer"><path codeLine="32" d="M253.1081,267.4385 C228.2181,300.8085 209.94,325.31 191.05,350.63 " fill="none" id="User-backto-Customer" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="263.87,253.01,248.2986,263.8512,257.9176,271.0258,263.87,253.01" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link User to Courier--><g id="link_User_Courier"><path codeLine="33" d="M370.8918,267.4386 C385.3318,286.7986 390.41,293.6 404.85,312.96 " fill="none" id="User-backto-Courier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="360.13,253.01,366.0823,271.0258,375.7013,263.8513,360.13,253.01" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link Courier to BikeCourier--><g id="link_Courier_BikeCourier"><path codeLine="34" d="M304.4386,452.0948 C261.5186,473.0748 232.45,487.27 198.51,503.86 " fill="none" id="Courier-backto-BikeCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="320.61,444.19,301.8037,446.7044,307.0736,457.4853,320.61,444.19" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link Courier to CarCourier--><g id="link_Courier_CarCourier"><path codeLine="35" d="M453,462.41 C453,483.36 453,487.41 453,503.95 " fill="none" id="Courier-backto-CarCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="453,444.41,447,462.41,459,462.41,453,444.41" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link Courier to DroneCourier--><g id="link_Courier_DroneCourier"><path codeLine="36" d="M601.5614,452.0948 C644.4814,473.0748 673.55,487.27 707.49,503.86 " fill="none" id="Courier-backto-DroneCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="585.39,444.19,598.9264,457.4853,604.1963,446.7044,585.39,444.19" style="stroke:#444444;stroke-width:1.0;"/></g><!--SRC=[fPBTQi9048NlynHRl4dH-01I2Z5QA9LIi7s0SNVGePkTi3yfnVhkNMDZLk-aTzcJ_UQSayaT6Qc3GY6vhjbCATGwWutp5gGNKeDpuiEX5VjCY568Jyzg9jRUajaU5GCrfkTcnoOLnblqh_5EVdyblXql9keXEvcLmU_MQ5kIs7cEDM_9v4VdMPTa8fgldehuXbaZc3DV1UUv_WjSADJKelqkbRBeNE9srR7YOAclAOErQFmA_4me3XkDgSecLScLBP26U1p2nDYXKU1nnH8yiSdrC6iYz30YDcYPL2JsVQA364lGCaG4b-zbhiXvC19VwWGYuy-Lv_I9QVuRyGhiF-Y5ZNli-T7JObajvxVDIJS-dJvsIywwV-xXfoZE2qsbartMstPYyXKkNmpzBlKq-Iy0]--></g></svg>
+    <div>
+      <p style="font-family:var(--mono); font-size:1.25rem">DroneCourier → Courier → User</p>
+      <ul class="clean" style="margin-top:2vh">
+        <li>Great for OCP — the dispatcher never changed</li>
+        <li>But the drone inherited <b>everything</b> above it</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 7 · WHAT BREAKS -->
+<div class="slide">
+  <div class="kicker">Part 1 · The drone problem</div>
+  <h2>Hand a drone to code that expects a <code>User</code></h2>
+  <div class="body">
+    <div class="grid-3">
+      <div class="tile bad">
+        <div class="big">"Call your courier"</div>
+<pre>sms.send(
+  order.getCourier()
+       .getPhone(), ...);</pre>
+        <p style="margin-top:12px">Phone is <code>null</code> → crash, or an SMS to nowhere.</p>
+      </div>
+      <div class="tile bad">
+        <div class="big">Login</div>
+<pre>authService.login(
+  drone, "???");</pre>
+        <p style="margin-top:12px">A fake password for a fake account — a security hole.</p>
+      </div>
+      <div class="tile bad">
+        <div class="big">Promo email</div>
+<pre>for (User u : users)
+  email.sendPromo(u);</pre>
+        <p style="margin-top:12px">"Hi DRN-0042, 20% off your next pizza!"</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 8 · USER'S PROMISE -->
+<div class="slide">
+  <div class="kicker">Part 1 · The drone problem</div>
+  <h2>What <code>User</code> promises</h2>
+  <div class="body">
+<pre style="font-size:1.25rem; max-width:960px">public abstract class User {
+    <span class="c">/** returns a phone number that reaches a person */</span>
+    public String getPhone() { ... }
+}</pre>
+    <div class="grid-2" style="margin-top:4vh; align-items:stretch">
+      <div class="tile bad">
+        <div class="big">Option 1: return null</div>
+<pre>public String getPhone() {
+<span class="r">    return null;</span>}</pre>
+      </div>
+      <div class="tile bad">
+        <div class="big">Option 2: throw</div>
+<pre>public String getPhone() {
+<span class="r">    throw new UnsupportedOperationException();</span>}</pre>
+      </div>
+    </div>
+    <p class="note warn">Either way, the drone breaks a promise its parent made. It fails the fake test.</p>
+  </div>
+</div>
+
+<!-- 9 · NOT THE DRONE'S FAULT -->
+<div class="slide">
+  <div class="kicker">Part 1 · The drone problem</div>
+  <h2>The bug is not in the drone</h2>
+  <div class="body">
+    <div class="quote">The bug was written in week 1:<br><code style="font-size:0.85em">Courier extends User</code></div>
+    <ul class="clean">
+      <li>It assumed <b>every courier is a person with an account</b></li>
+      <li>True for bikes and cars — so nobody noticed</li>
+      <li>The drone is just the first child that exposes it</li>
+    </ul>
+    <p class="note">Bad inheritance looks fine — until the "weird" subclass arrives.</p>
+  </div>
+</div>
+
+<!-- 10 · IS vs HAS -->
+<div class="slide">
+  <div class="kicker">Part 1 · The fix</div>
+  <h2>What a courier <em>is</em> vs. what it <em>has</em></h2>
+  <div class="body">
+    <table class="check">
+      <tr><th></th><th>Behavior</th><th>Bike</th><th>Car</th><th>Drone</th></tr>
+      <tr><td><b>A courier <span style="color:var(--accent)">is</span></b> a delivery unit</td>
+          <td class="mono">location, availability, ETA</td>
+          <td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔</td></tr>
+      <tr><td><b>A courier <span style="color:var(--accent)">has</span></b> a driver</td>
+          <td class="mono">name, phone, login</td>
+          <td class="yes">✔</td><td class="yes">✔</td><td class="no">✘</td></tr>
+    </table>
+    <p class="note">Shared by <b>all</b> children → goes up in the parent. Shared by <b>some</b> → goes down into a sibling branch.</p>
+  </div>
+</div>
+
+<!-- 11 · AFTER DIAGRAM -->
+<div class="slide">
+  <div class="kicker">Part 1 · The fix</div>
+  <h2>Courier is no longer a User</h2>
+  <div class="figure"><svg preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" version="1.1" viewBox="0 0 1005 486" zoomAndPan="magnify"><defs/><g><!--class User--><g id="elem_User"><rect codeLine="2" fill="#F1F1F1" height="130.6973" id="User" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="141.9033" x="697" y="216"/><ellipse cx="748.3862" cy="231" fill="#A9DCDF" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M748.105,227.1406 L747.1519,231.3125 L749.0581,231.3125 L748.105,227.1406 Z M746.8706,225.2969 L749.3394,225.2969 L752.0894,235.5 L750.0737,235.5 L749.4487,232.9844 L746.7456,232.9844 L746.1362,235.5 L744.105,235.5 L746.8706,225.2969 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="31.1309" x="767.3862" y="236.0928">User</text><line style="stroke:#555555;stroke-width:0.5;" x1="698" x2="837.9033" y1="246" y2="246"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="97.3506" x="703" y="263.5625">#userId: String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="92.4766" x="703" y="280.502">#name: String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="97.5967" x="703" y="297.4414">#phone: String</text><line style="stroke:#555555;stroke-width:0.5;" x1="698" x2="837.9033" y1="304.8184" y2="304.8184"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="126.6904" x="703" y="322.3809">+getName(): String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="129.9033" x="703" y="339.3203">+getPhone(): String</text></g><!--class AuthService--><g id="elem_AuthService"><rect codeLine="9" fill="#F1F1F1" height="54.9395" id="AuthService" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="267.8896" x="634" y="53.5"/><ellipse cx="723.6299" cy="68.5" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M726.0205,73.2031 Q725.5361,73.4531 725.0049,73.5781 Q724.4893,73.7031 723.9111,73.7031 Q721.8486,73.7031 720.7549,72.3438 Q719.6768,70.9844 719.6768,68.4063 Q719.6768,65.8281 720.7549,64.4688 Q721.8486,63.1094 723.9111,63.1094 Q724.4893,63.1094 725.0205,63.2344 Q725.5518,63.3594 726.0205,63.5938 L726.0205,65.8438 Q725.5049,65.3594 725.0049,65.1406 Q724.5205,64.9219 724.0049,64.9219 Q722.8955,64.9219 722.333,65.7969 Q721.7705,66.6719 721.7705,68.4063 Q721.7705,70.125 722.333,71.0156 Q722.8955,71.8906 724.0049,71.8906 Q724.5205,71.8906 725.0049,71.6719 Q725.5049,71.4375 726.0205,70.9688 L726.0205,73.2031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="80.6299" x="742.6299" y="73.5928">AuthService</text><line style="stroke:#555555;stroke-width:0.5;" x1="635" x2="900.8896" y1="83.5" y2="83.5"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="255.8896" x="640" y="101.0625">+login(user: User, pw: String): boolean</text></g><!--class Customer--><g id="elem_Customer"><rect codeLine="12" fill="#F1F1F1" height="54.9395" id="Customer" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="173.1914" x="825.5" y="425"/><ellipse cx="875.813" cy="440" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M878.2036,444.7031 Q877.7192,444.9531 877.188,445.0781 Q876.6724,445.2031 876.0942,445.2031 Q874.0317,445.2031 872.938,443.8438 Q871.8599,442.4844 871.8599,439.9063 Q871.8599,437.3281 872.938,435.9688 Q874.0317,434.6094 876.0942,434.6094 Q876.6724,434.6094 877.2036,434.7344 Q877.7349,434.8594 878.2036,435.0938 L878.2036,437.3438 Q877.688,436.8594 877.188,436.6406 Q876.7036,436.4219 876.188,436.4219 Q875.0786,436.4219 874.5161,437.2969 Q873.9536,438.1719 873.9536,439.9063 Q873.9536,441.625 874.5161,442.5156 Q875.0786,443.3906 876.188,443.3906 Q876.7036,443.3906 877.188,443.1719 Q877.688,442.9375 878.2036,442.4688 L878.2036,444.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="64.5654" x="894.813" y="445.0928">Customer</text><line style="stroke:#555555;stroke-width:0.5;" x1="826.5" x2="997.6914" y1="455" y2="455"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="161.1914" x="831.5" y="472.5625">-deliveryAddress: String</text></g><!--class Driver--><g id="elem_Driver"><rect codeLine="15" fill="#C8F7C5" height="54.9395" id="Driver" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="165.3506" x="625.5" y="425"/><ellipse cx="684.1426" cy="440" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M686.5332,444.7031 Q686.0488,444.9531 685.5176,445.0781 Q685.002,445.2031 684.4238,445.2031 Q682.3613,445.2031 681.2676,443.8438 Q680.1895,442.4844 680.1895,439.9063 Q680.1895,437.3281 681.2676,435.9688 Q682.3613,434.6094 684.4238,434.6094 Q685.002,434.6094 685.5332,434.7344 Q686.0645,434.8594 686.5332,435.0938 L686.5332,437.3438 Q686.0176,436.8594 685.5176,436.6406 Q685.0332,436.4219 684.5176,436.4219 Q683.4082,436.4219 682.8457,437.2969 Q682.2832,438.1719 682.2832,439.9063 Q682.2832,441.625 682.8457,442.5156 Q683.4082,443.3906 684.5176,443.3906 Q685.0332,443.3906 685.5176,443.1719 Q686.0176,442.9375 686.5332,442.4688 L686.5332,444.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="40.0654" x="703.1426" y="445.0928">Driver</text><line style="stroke:#555555;stroke-width:0.5;" x1="626.5" x2="789.8506" y1="455" y2="455"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="153.3506" x="631.5" y="472.5625">-licenseNumber: String</text></g><!--class Courier--><g id="elem_Courier"><rect codeLine="18" fill="#FFF3B0" height="147.6367" id="Courier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="321.0459" x="191.5" y="7"/><ellipse cx="323.564" cy="22" fill="#A9DCDF" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M323.2827,18.1406 L322.3296,22.3125 L324.2358,22.3125 L323.2827,18.1406 Z M322.0483,16.2969 L324.5171,16.2969 L327.2671,26.5 L325.2515,26.5 L324.6265,23.9844 L321.9233,23.9844 L321.314,26.5 L319.2827,26.5 L322.0483,16.2969 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="48.918" x="342.564" y="27.0928">Courier</text><line style="stroke:#555555;stroke-width:0.5;" x1="192.5" x2="511.5459" y1="37" y2="37"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="130.3955" x="197.5" y="54.5625">#currentLat: double</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="134.6201" x="197.5" y="71.502">#currentLon: double</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="140.8203" x="197.5" y="88.4414">#isAvailable: boolean</text><line style="stroke:#555555;stroke-width:0.5;" x1="192.5" x2="511.5459" y1="95.8184" y2="95.8184"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="309.0459" x="197.5" y="113.3809">+updateLocation(lat: double, lon: double): void</text><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="140.4717" x="197.5" y="130.3203">+getContact(): String</text><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="263.5869" x="197.5" y="147.2598">+calculateETA(distanceKm: double): int</text></g><!--class HumanCourier--><g id="elem_HumanCourier"><rect codeLine="26" fill="#C8F7C5" height="54.9395" id="HumanCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="151.7676" x="377" y="254"/><ellipse cx="402.2614" cy="269" fill="#A9DCDF" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M401.9802,265.1406 L401.0271,269.3125 L402.9333,269.3125 L401.9802,265.1406 Z M400.7458,263.2969 L403.2146,263.2969 L405.9646,273.5 L403.9489,273.5 L403.3239,270.9844 L400.6208,270.9844 L400.0114,273.5 L397.9802,273.5 L400.7458,263.2969 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="96.7422" x="417.764" y="274.0928">HumanCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="378" x2="527.7676" y1="284" y2="284"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="139.7676" x="383" y="301.5625">+getContact(): String</text></g><!--class BikeCourier--><g id="elem_BikeCourier"><rect codeLine="29" fill="#F1F1F1" height="54.9395" id="BikeCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="273.5566" x="316" y="425"/><ellipse cx="410.0835" cy="440" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M412.4741,444.7031 Q411.9897,444.9531 411.4585,445.0781 Q410.9429,445.2031 410.3647,445.2031 Q408.3022,445.2031 407.2085,443.8438 Q406.1304,442.4844 406.1304,439.9063 Q406.1304,437.3281 407.2085,435.9688 Q408.3022,434.6094 410.3647,434.6094 Q410.9429,434.6094 411.4741,434.7344 Q412.0054,434.8594 412.4741,435.0938 L412.4741,437.3438 Q411.9585,436.8594 411.4585,436.6406 Q410.9741,436.4219 410.4585,436.4219 Q409.3491,436.4219 408.7866,437.2969 Q408.2241,438.1719 408.2241,439.9063 Q408.2241,441.625 408.7866,442.5156 Q409.3491,443.3906 410.4585,443.3906 Q410.9741,443.3906 411.4585,443.1719 Q411.9585,442.9375 412.4741,442.4688 L412.4741,444.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="77.3896" x="429.0835" y="445.0928">BikeCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="317" x2="588.5566" y1="455" y2="455"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="261.5566" x="322" y="472.5625">+calculateETA(distanceKm: double): int</text></g><!--class CarCourier--><g id="elem_CarCourier"><rect codeLine="32" fill="#F1F1F1" height="54.9395" id="CarCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="273.5566" x="7" y="425"/><ellipse cx="103.6025" cy="440" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M105.9932,444.7031 Q105.5088,444.9531 104.9775,445.0781 Q104.4619,445.2031 103.8838,445.2031 Q101.8213,445.2031 100.7275,443.8438 Q99.6494,442.4844 99.6494,439.9063 Q99.6494,437.3281 100.7275,435.9688 Q101.8213,434.6094 103.8838,434.6094 Q104.4619,434.6094 104.9932,434.7344 Q105.5244,434.8594 105.9932,435.0938 L105.9932,437.3438 Q105.4775,436.8594 104.9775,436.6406 Q104.4932,436.4219 103.9775,436.4219 Q102.8682,436.4219 102.3057,437.2969 Q101.7432,438.1719 101.7432,439.9063 Q101.7432,441.625 102.3057,442.5156 Q102.8682,443.3906 103.9775,443.3906 Q104.4932,443.3906 104.9775,443.1719 Q105.4775,442.9375 105.9932,442.4688 L105.9932,444.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="72.3516" x="122.6025" y="445.0928">CarCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="8" x2="279.5566" y1="455" y2="455"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="261.5566" x="13" y="472.5625">+calculateETA(distanceKm: double): int</text></g><!--class DroneCourier--><g id="elem_DroneCourier"><rect codeLine="35" fill="#F1F1F1" height="113.7578" id="DroneCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="273.5566" x="68" y="224.5"/><ellipse cx="156.1807" cy="239.5" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M158.5713,244.2031 Q158.0869,244.4531 157.5557,244.5781 Q157.04,244.7031 156.4619,244.7031 Q154.3994,244.7031 153.3057,243.3438 Q152.2275,241.9844 152.2275,239.4063 Q152.2275,236.8281 153.3057,235.4688 Q154.3994,234.1094 156.4619,234.1094 Q157.04,234.1094 157.5713,234.2344 Q158.1025,234.3594 158.5713,234.5938 L158.5713,236.8438 Q158.0557,236.3594 157.5557,236.1406 Q157.0713,235.9219 156.5557,235.9219 Q155.4463,235.9219 154.8838,236.7969 Q154.3213,237.6719 154.3213,239.4063 Q154.3213,241.125 154.8838,242.0156 Q155.4463,242.8906 156.5557,242.8906 Q157.0713,242.8906 157.5557,242.6719 Q158.0557,242.4375 158.5713,241.9688 L158.5713,244.2031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="89.1953" x="175.1807" y="244.5928">DroneCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="69" x2="340.5566" y1="254.5" y2="254.5"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="104.4941" x="74" y="272.0625">-droneId: String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="128.9326" x="74" y="289.002">-batteryPercent: int</text><line style="stroke:#555555;stroke-width:0.5;" x1="69" x2="340.5566" y1="296.3789" y2="296.3789"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="139.7676" x="74" y="313.9414">+getContact(): String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="261.5566" x="74" y="330.8809">+calculateETA(distanceKm: double): int</text></g><!--link AuthService to User--><g id="link_AuthService_User"><path codeLine="41" d="M768,108.77 C768,136.07 768,173.47 768,209.8 " fill="none" id="AuthService-to-User" style="stroke:#444444;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="#444444" points="768,215.8,772,206.8,768,210.8,764,206.8,768,215.8" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link User to Customer--><g id="link_User_Customer"><path codeLine="42" d="M834.9349,361.0602 C857.9349,388.0502 871.68,404.18 889.39,424.97 " fill="none" id="User-backto-Customer" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="823.26,347.36,830.3682,364.9519,839.5016,357.1686,823.26,347.36" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link User to Driver--><g id="link_User_Driver"><path codeLine="43" d="M738.949,364.3231 C729.369,391.3131 724.8,404.18 717.42,424.97 " fill="none" id="User-backto-Driver" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="744.97,347.36,733.2946,362.3161,744.6034,366.3301,744.97,347.36" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link Courier to HumanCourier--><g id="link_Courier_HumanCourier"><path codeLine="44" d="M397.3431,171.1125 C414.8931,205.6025 426.59,228.59 439.43,253.82 " fill="none" id="Courier-backto-HumanCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="389.18,155.07,391.9956,173.8336,402.6907,168.3915,389.18,155.07" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link Courier to DroneCourier--><g id="link_Courier_DroneCourier"><path codeLine="45" d="M287.1751,169.5335 C270.2251,192.4135 262.52,202.83 246.58,224.36 " fill="none" id="Courier-backto-DroneCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="297.89,155.07,282.354,165.9619,291.9963,173.1051,297.89,155.07" style="stroke:#444444;stroke-width:1.0;"/></g><!--link HumanCourier to Driver--><g id="link_HumanCourier_Driver"><path codeLine="46" d="M493.12,309.09 C540.81,340.7 614.9182,389.8161 662.6882,421.4661 " fill="none" id="HumanCourier-to-Driver" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="#444444" points="667.69,424.78,662.3966,416.4746,663.5218,422.0184,657.978,423.1436,667.69,424.78" style="stroke:#444444;stroke-width:1.0;"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="55.4258" x="620" y="391.5625">itsDriver</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="22.5928" x="477.5803" y="330.5472">0..1</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="5.6943" x="652.297" y="413.7576">1</text></g><!--reverse link HumanCourier to BikeCourier--><g id="link_HumanCourier_BikeCourier"><path codeLine="47" d="M453,327.28 C453,358.92 453,393.26 453,424.85 " fill="none" id="HumanCourier-backto-BikeCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="453,309.28,447,327.28,459,327.28,453,309.28" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link HumanCourier to CarCourier--><g id="link_HumanCourier_CarCourier"><path codeLine="48" d="M402.0881,319.6436 C384.9581,331.7936 378.67,335.55 359,347 C308.42,376.43 248.33,405.14 204.56,425 " fill="none" id="HumanCourier-backto-CarCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="416.77,309.23,398.6169,314.7496,405.5593,324.5375,416.77,309.23" style="stroke:#444444;stroke-width:1.0;"/></g><!--SRC=[fLFHIiCm57tlLyJvCjbQ515bo61MY-AGmVG3qkGoWsaoafkApFsxQRjswLGGV5fpSiyzzvwS7Gd5fED0c2uAhHBX2XdHtAAX30cJr5hoOi6GJKJ8iVDV3tn2bcY4MbM8eWM4v_MhLY4mMW4- -PhXoG6ug0e3T1irOZE7hqimfM1GQuwaNWarh9GdzIHZidvlMPwUQos1gewVEekws0qSSv2Y1FCnuzo0jT_KRarrJOxJg-molMWuqaih2q-ko2lDZd7WIggT4HKtoxBpczF68EQC0OLpYXF2jSibXAXM8IhihAH2Kd_Sh-4NTcjE4UQQKHHQ3UM-rvZ8VGk_Uwa5zunDEzcsTZRL2lsXvtXOmgXapdU5k-VPa0kBL35uB8A-Gk7tVUzTGLMtT63OpvgjmpVY3LfMNVrN-PtBrFo3VMjyo49-p2ka5-4ufuW-8Wim_jsnQK1-TVBF4uH1Jf9fdTse_YjTVyPnbzC0Qi8OjVFMMEXw_oRSBUezpk0qISu698wdPE1_TndtSw7TIVJAwsx1C_rmkt-5Bm00]--></g></svg></div>
+  <p class="note legend" style="margin-top:2vh">
+    <span class="sw" style="background:#c8f7c5">Green</span> added: <code>HumanCourier</code>, <code>Driver</code>
+    &nbsp;&nbsp;·&nbsp;&nbsp;
+    <span class="sw" style="background:#fff3b0">Yellow</span> refactored: <code>Courier</code> (no longer <code>extends User</code>)
+  </p>
+</div>
+
+<!-- 12 · AFTER CODE -->
+<div class="slide">
+  <div class="kicker">Part 1 · The fix</div>
+  <h2>Is-a for the role, has-a for the person</h2>
+  <div class="grid-2" style="grid-template-columns: 1.25fr 1fr; flex:1">
+<pre><span class="g">public abstract class Courier {     // no "extends User"</span>    protected double currentLat, currentLon;
+    protected boolean isAvailable;
+    <span class="c">/** reaches whoever is responsible */</span>
+    public abstract String getContact();
+    public abstract int calculateETA(double km);
+}
+
+public abstract class HumanCourier extends Courier {
+<span class="g">    private Driver itsDriver;      // has-a</span>    public String getContact() {
+        return itsDriver.getPhone();
+    }
+}
+
+public class DroneCourier extends Courier {
+    public String getContact() {
+        return OPS_CENTER_PHONE;
+    }
+}</pre>
+    <div>
+<pre><span class="r">authService.login(drone, pw);</span></pre>
+      <p class="note bad" style="margin-top:2vh">Compile error: <code>DroneCourier</code> is not a <code>User</code>.<br>The bug is caught before the app runs.</p>
+      <p class="note" style="margin-top:3vh"><code>getContact()</code> is a promise <b>every</b> courier can keep: the driver's phone, or the drone's operations center.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 13 · WHAT WE GAINED -->
+<div class="slide">
+  <div class="kicker">Part 1 · The fix</div>
+  <h2>What we gained</h2>
+  <div class="body">
+    <div class="grid-3">
+      <div class="tile good"><div class="big">Compile time</div><p>A drone can't reach <code>AuthService</code> or the promo list. Errors move from runtime to compile time.</p></div>
+      <div class="tile good"><div class="big">Dispatcher unchanged</div><p><code>DeliveryDispatcher</code> still works with <code>Courier</code>. Not one line edited.</p></div>
+      <div class="tile good"><div class="big">No <code>instanceof</code></div><p>"Contact your courier" calls <code>getContact()</code> on any courier — no type checks.</p></div>
+    </div>
+    <p class="note">Why not <code>extends Courier, User</code>? Java allows one parent class — and a bike courier never really <b>was</b> a person. It <b>has</b> one.</p>
+  </div>
+</div>
+
+<!-- 14 · DIVIDER: CONTRACTS -->
+<div class="slide divider">
+  <div class="body">
+    <div class="num">Part 2</div>
+    <h1>Contracts</h1>
+    <p class="muted" style="font-size:1.5rem; margin-top:14px">What exactly does a parent promise?</p>
+  </div>
+</div>
+
+<!-- 15 · PRE / POST / INVARIANT -->
+<div class="slide">
+  <div class="kicker">Part 2 · Contracts</div>
+  <h2>Every method is a contract</h2>
+  <div class="body">
+    <div class="contract">
+      <div class="tile">
+        <div class="big">Precondition</div>
+        <div class="he">תנאי קדם</div>
+        <p>What must be true <b>before</b> the call.</p>
+        <div class="who">Caller's responsibility</div>
+      </div>
+      <div class="tile">
+        <div class="big">Postcondition</div>
+        <div class="he">תנאי בתר</div>
+        <p>What the method guarantees <b>after</b> it runs.</p>
+        <div class="who">Method's responsibility</div>
+      </div>
+      <div class="tile">
+        <div class="big">Invariant</div>
+        <div class="he">שמורה</div>
+        <p>What is <b>always</b> true about the object.</p>
+        <div class="who">Class's responsibility</div>
+      </div>
+    </div>
+    <p class="note">Java has no <code>require</code> / <code>ensure</code> keywords — we write the contract as a comment. It's a promise, not syntax.</p>
+  </div>
+</div>
+
+<!-- 16 · COURIER CONTRACT + CLIENT -->
+<div class="slide">
+  <div class="kicker">Part 2 · Contracts</div>
+  <h2>The <code>Courier</code> contract</h2>
+  <div class="grid-2" style="flex:1; align-items:start; margin-top:2vh">
+    <div>
+      <span class="tag good">The promise</span>
+<pre>abstract class Courier {
+    <span class="c">/**
+     * pre:  0 &lt;= distanceKm &lt;= 15
+     * post: minutes, result &gt;= 0,
+     *       real arrival within ±5 min
+     */</span>
+    public abstract int calculateETA(
+            double distanceKm);
+}</pre>
+    </div>
+    <div>
+      <span class="tag good">The client trusting it</span>
+<pre><span class="c">// DeliveryDispatcher</span>
+for (Courier c : itsFleet) {
+    int eta = c.calculateETA(
+                  distance(c, rest));
+    if (eta &lt; bestEta) {
+        best = c; bestEta = eta;
+    }
+}
+customer.notify(
+    "Arriving in " + bestEta + " min");</pre>
+    </div>
+  </div>
+  <p class="note">The dispatcher never checks the courier type. It relies only on the contract.</p>
+</div>
+
+<!-- 17 · THE RULE -->
+<div class="slide">
+  <div class="kicker">Part 2 · Contracts</div>
+  <h2>What a child may change</h2>
+  <div class="body">
+    <div class="quote" style="margin-bottom:4vh">Accept more, promise more.<br>Never pickier, never less reliable.</div>
+    <table class="check">
+      <tr><th>Courier</th><th>Change</th><th>Means</th><th></th></tr>
+      <tr><td><code>CarCourier</code> handles <b>0–30 km</b></td><td>Weaker precondition</td><td class="muted">Accepts more</td><td class="yes">✔ OK</td></tr>
+      <tr><td><code>DroneCourier</code> accurate to <b>±1 min</b></td><td>Stronger postcondition</td><td class="muted">Promises more</td><td class="yes">✔ OK</td></tr>
+      <tr><td><code>BikeCourier</code> handles only <b>0–8 km</b></td><td>Stronger precondition</td><td class="muted">Demands more</td><td class="no">✘ Violates</td></tr>
+      <tr><td>A courier accurate to only <b>±20 min</b></td><td>Weaker postcondition</td><td class="muted">Promises less</td><td class="no">✘ Violates</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- 18 · BIKE ATTEMPT 1 -->
+<div class="slide">
+  <div class="kicker">Part 2 · The bike problem</div>
+  <h2>Attempt 1: throw</h2>
+  <div class="grid-2" style="flex:1">
+    <div>
+      <span class="tag bad">Stronger precondition</span>
+<pre>class BikeCourier extends Courier {
+    public int calculateETA(double km) {
+<span class="r">        if (km &gt; 8)</span><span class="r">            throw new TooFarException();</span>        return (int)(km / 15 * 60);
+    }
+}</pre>
+    </div>
+    <div>
+      <h3>An order 12 km away</h3>
+      <ol class="flow">
+        <li>12 ≤ 15 — the dispatcher follows the rules</li>
+        <li>It loops over the fleet</li>
+        <li class="boom">Hits a bike → the whole dispatch crashes</li>
+      </ol>
+      <p class="note warn">A car was free the whole time.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 19 · BIKE ATTEMPT 2 -->
+<div class="slide">
+  <div class="kicker">Part 2 · The bike problem</div>
+  <h2>Attempt 2: "fine — return -1"</h2>
+  <div class="grid-2" style="flex:1">
+    <div>
+      <span class="tag bad">Weaker postcondition</span>
+<pre>class BikeCourier extends Courier {
+    public int calculateETA(double km) {
+<span class="r">        if (km &gt; 8)</span><span class="r">            return -1;   // "can't"</span>        return (int)(km / 15 * 60);
+    }
+}</pre>
+      <p class="note warn">The contract promised <code>result &gt;= 0</code>.</p>
+    </div>
+    <div>
+      <table class="check" style="margin-bottom:3vh">
+        <tr><td><code>CarCourier</code></td><td class="mono">24 min</td></tr>
+        <tr><td><code>BikeCourier</code></td><td class="mono no">-1 min &nbsp;← "fastest"</td></tr>
+      </table>
+      <div class="screen">
+        <div class="app">BiteExpress</div>
+        <div class="msg">Arriving in <span class="bad">-1</span> min</div>
+        <p class="muted" style="font-size:1rem; margin-top:6px">A 12 km order, on a bicycle.</p>
+      </div>
+      <p class="note bad">Worse than a crash: no exception, no log — just a wrong delivery.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 20 · THE FIX -->
+<div class="slide">
+  <div class="kicker">Part 2 · The bike problem</div>
+  <h2>The fix: put the limit in the contract</h2>
+  <div class="grid-2" style="flex:1; align-items:start; margin-top:2vh">
+    <div>
+      <span class="tag good">Courier</span>
+<pre>abstract class Courier {
+<span class="g">    public abstract boolean</span><span class="g">        canDeliver(double distanceKm);</span>
+    <span class="c">/**
+     * pre:  canDeliver(distanceKm)
+     * post: result &gt;= 0, within ±5 min
+     */</span>
+    public abstract int calculateETA(
+            double distanceKm);
+}</pre>
+    </div>
+    <div>
+      <span class="tag good">DeliveryDispatcher</span>
+<pre>for (Courier c : itsFleet) {
+    double d = distance(c, rest);
+<span class="g">    if (!c.canDeliver(d)) continue;</span>    int eta = c.calculateETA(d);
+    if (eta &lt; bestEta) {
+        best = c; bestEta = eta;
+    }
+}</pre>
+      <p class="note">Ask, don't assume. Still no <code>instanceof</code> — OCP stays intact.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 21 · EVERY COURIER, ONE CONTRACT (+ DRONE) -->
+<div class="slide">
+  <div class="kicker">Part 2 · The bike problem</div>
+  <h2>Every courier, one contract</h2>
+  <div class="body">
+    <div class="grid-3">
+      <div class="tile">
+        <div class="big">Bike</div>
+<pre>boolean canDeliver(double km) {
+    return km &lt;= 8;
+}</pre>
+      </div>
+      <div class="tile">
+        <div class="big">Car</div>
+<pre>boolean canDeliver(double km) {
+    return km &lt;= 30;
+}</pre>
+      </div>
+      <div class="tile good">
+        <div class="big">Drone</div>
+<pre>boolean canDeliver(double km) {
+    return km &lt;= 10
+        &amp;&amp; batteryPercent &gt; 20
+        &amp;&amp; weather.isFlyable();
+}</pre>
+      </div>
+    </div>
+    <p class="note good">The drone's real limits — battery, weather — are now visible to the dispatcher, not hidden exceptions waiting to crash it.</p>
+  </div>
+</div>
+
+<!-- 22 · KEY SENTENCE -->
+<div class="slide">
+  <div class="kicker">Part 2 · The bike problem</div>
+  <div class="body">
+    <div class="quote">LSP doesn't forbid subclasses from having limits.<br>It forbids <span style="color:var(--bad)">hidden</span> limits.</div>
+    <p class="muted" style="font-size:1.4rem">If the client can't know about a limit, the client can't respect it.</p>
+  </div>
+</div>
+
+<!-- 23 · SAME BUG TWICE -->
+<div class="slide">
+  <div class="kicker">Summary</div>
+  <h2>The same bug, twice</h2>
+  <div class="body">
+    <div class="grid-2" style="align-items:stretch">
+      <div class="tile bad">
+        <div class="big">The drone</div>
+        <p>Couldn't keep <code>User</code>'s promise:<br>"I have a phone and a password."</p>
+      </div>
+      <div class="tile bad">
+        <div class="big">The bike</div>
+        <p>Couldn't keep <code>Courier</code>'s promise:<br>"Any distance up to 15 km."</p>
+      </div>
+    </div>
+    <p class="note good" style="font-size:1.35rem">The fix both times: change the hierarchy or the contract so that <b>every promise in the parent is one all children can keep</b>.</p>
+  </div>
+</div>
+
+<!-- 24 · WARNING SIGNS -->
+<div class="slide">
+  <div class="kicker">Summary</div>
+  <h2>Signs of an LSP violation</h2>
+  <div class="body">
+    <table class="check">
+      <tr><td>The child throws <code>UnsupportedOperationException</code></td><td class="muted">the drone's <code>getPhone()</code></td></tr>
+      <tr><td>The child accepts <b>less</b> input than the parent</td><td class="muted">the bike's 8 km limit</td></tr>
+      <tr><td>The child returns a magic value: <code>-1</code>, <code>null</code></td><td class="muted">the bike's <code>-1</code></td></tr>
+      <tr><td>The client checks <code>instanceof</code> before calling</td><td class="muted">"if it's a drone, skip the SMS"</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- 25 · FINAL DIAGRAM -->
+<div class="slide">
+  <div class="kicker">BiteExpress after today</div>
+  <h2>The new courier hierarchy</h2>
+  <div class="figure"><svg preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" version="1.1" viewBox="0 0 1045 653" zoomAndPan="magnify"><defs/><g><!--class User--><g id="elem_User"><rect codeLine="2" fill="#F1F1F1" height="130.6973" id="User" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="141.9033" x="773" y="366"/><ellipse cx="824.3862" cy="381" fill="#A9DCDF" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M824.105,377.1406 L823.1519,381.3125 L825.0581,381.3125 L824.105,377.1406 Z M822.8706,375.2969 L825.3394,375.2969 L828.0894,385.5 L826.0737,385.5 L825.4487,382.9844 L822.7456,382.9844 L822.1362,385.5 L820.105,385.5 L822.8706,375.2969 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="31.1309" x="843.3862" y="386.0928">User</text><line style="stroke:#555555;stroke-width:0.5;" x1="774" x2="913.9033" y1="396" y2="396"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="97.3506" x="779" y="413.5625">#userId: String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="92.4766" x="779" y="430.502">#name: String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="97.5967" x="779" y="447.4414">#phone: String</text><line style="stroke:#555555;stroke-width:0.5;" x1="774" x2="913.9033" y1="454.8184" y2="454.8184"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="126.6904" x="779" y="472.3809">+getName(): String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="129.9033" x="779" y="489.3203">+getPhone(): String</text></g><!--class AuthService--><g id="elem_AuthService"><rect codeLine="9" fill="#F1F1F1" height="54.9395" id="AuthService" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="267.8896" x="710" y="195"/><ellipse cx="799.6299" cy="210" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M802.0205,214.7031 Q801.5361,214.9531 801.0049,215.0781 Q800.4893,215.2031 799.9111,215.2031 Q797.8486,215.2031 796.7549,213.8438 Q795.6768,212.4844 795.6768,209.9063 Q795.6768,207.3281 796.7549,205.9688 Q797.8486,204.6094 799.9111,204.6094 Q800.4893,204.6094 801.0205,204.7344 Q801.5518,204.8594 802.0205,205.0938 L802.0205,207.3438 Q801.5049,206.8594 801.0049,206.6406 Q800.5205,206.4219 800.0049,206.4219 Q798.8955,206.4219 798.333,207.2969 Q797.7705,208.1719 797.7705,209.9063 Q797.7705,211.625 798.333,212.5156 Q798.8955,213.3906 800.0049,213.3906 Q800.5205,213.3906 801.0049,213.1719 Q801.5049,212.9375 802.0205,212.4688 L802.0205,214.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="80.6299" x="818.6299" y="215.0928">AuthService</text><line style="stroke:#555555;stroke-width:0.5;" x1="711" x2="976.8896" y1="225" y2="225"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="255.8896" x="716" y="242.5625">+login(user: User, pw: String): boolean</text></g><!--class Customer--><g id="elem_Customer"><rect codeLine="12" fill="#F1F1F1" height="54.9395" id="Customer" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="173.1914" x="865.5" y="583.5"/><ellipse cx="915.813" cy="598.5" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M918.2036,603.2031 Q917.7192,603.4531 917.188,603.5781 Q916.6724,603.7031 916.0942,603.7031 Q914.0317,603.7031 912.938,602.3438 Q911.8599,600.9844 911.8599,598.4063 Q911.8599,595.8281 912.938,594.4688 Q914.0317,593.1094 916.0942,593.1094 Q916.6724,593.1094 917.2036,593.2344 Q917.7349,593.3594 918.2036,593.5938 L918.2036,595.8438 Q917.688,595.3594 917.188,595.1406 Q916.7036,594.9219 916.188,594.9219 Q915.0786,594.9219 914.5161,595.7969 Q913.9536,596.6719 913.9536,598.4063 Q913.9536,600.125 914.5161,601.0156 Q915.0786,601.8906 916.188,601.8906 Q916.7036,601.8906 917.188,601.6719 Q917.688,601.4375 918.2036,600.9688 L918.2036,603.2031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="64.5654" x="934.813" y="603.5928">Customer</text><line style="stroke:#555555;stroke-width:0.5;" x1="866.5" x2="1037.6914" y1="613.5" y2="613.5"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="161.1914" x="871.5" y="631.0625">-deliveryAddress: String</text></g><!--class Driver--><g id="elem_Driver"><rect codeLine="15" fill="#C8F7C5" height="54.9395" id="Driver" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="165.3506" x="665.5" y="583.5"/><ellipse cx="724.1426" cy="598.5" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M726.5332,603.2031 Q726.0488,603.4531 725.5176,603.5781 Q725.002,603.7031 724.4238,603.7031 Q722.3613,603.7031 721.2676,602.3438 Q720.1895,600.9844 720.1895,598.4063 Q720.1895,595.8281 721.2676,594.4688 Q722.3613,593.1094 724.4238,593.1094 Q725.002,593.1094 725.5332,593.2344 Q726.0645,593.3594 726.5332,593.5938 L726.5332,595.8438 Q726.0176,595.3594 725.5176,595.1406 Q725.0332,594.9219 724.5176,594.9219 Q723.4082,594.9219 722.8457,595.7969 Q722.2832,596.6719 722.2832,598.4063 Q722.2832,600.125 722.8457,601.0156 Q723.4082,601.8906 724.5176,601.8906 Q725.0332,601.8906 725.5176,601.6719 Q726.0176,601.4375 726.5332,600.9688 L726.5332,603.2031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="40.0654" x="743.1426" y="603.5928">Driver</text><line style="stroke:#555555;stroke-width:0.5;" x1="666.5" x2="829.8506" y1="613.5" y2="613.5"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="153.3506" x="671.5" y="631.0625">-licenseNumber: String</text></g><!--class Courier--><g id="elem_Courier"><rect codeLine="18" fill="#FFF3B0" height="164.5762" id="Courier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="321.0459" x="257.5" y="140"/><ellipse cx="389.564" cy="155" fill="#A9DCDF" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M389.2827,151.1406 L388.3296,155.3125 L390.2358,155.3125 L389.2827,151.1406 Z M388.0483,149.2969 L390.5171,149.2969 L393.2671,159.5 L391.2515,159.5 L390.6265,156.9844 L387.9233,156.9844 L387.314,159.5 L385.2827,159.5 L388.0483,149.2969 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="48.918" x="408.564" y="160.0928">Courier</text><line style="stroke:#555555;stroke-width:0.5;" x1="258.5" x2="577.5459" y1="170" y2="170"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="130.3955" x="263.5" y="187.5625">#currentLat: double</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="134.6201" x="263.5" y="204.502">#currentLon: double</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="140.8203" x="263.5" y="221.4414">#isAvailable: boolean</text><line style="stroke:#555555;stroke-width:0.5;" x1="258.5" x2="577.5459" y1="228.8184" y2="228.8184"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="309.0459" x="263.5" y="246.3809">+updateLocation(lat: double, lon: double): void</text><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="140.4717" x="263.5" y="263.3203">+getContact(): String</text><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="283.999" x="263.5" y="280.2598">+canDeliver(distanceKm: double): boolean</text><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="263.5869" x="263.5" y="297.1992">+calculateETA(distanceKm: double): int</text></g><!--class HumanCourier--><g id="elem_HumanCourier"><rect codeLine="27" fill="#C8F7C5" height="54.9395" id="HumanCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="151.7676" x="407" y="404"/><ellipse cx="432.2614" cy="419" fill="#A9DCDF" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M431.9802,415.1406 L431.0271,419.3125 L432.9333,419.3125 L431.9802,415.1406 Z M430.7458,413.2969 L433.2146,413.2969 L435.9646,423.5 L433.9489,423.5 L433.3239,420.9844 L430.6208,420.9844 L430.0114,423.5 L427.9802,423.5 L430.7458,413.2969 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="96.7422" x="447.764" y="424.0928">HumanCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="408" x2="557.7676" y1="434" y2="434"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="139.7676" x="413" y="451.5625">+getContact(): String</text></g><!--class BikeCourier--><g id="elem_BikeCourier"><rect codeLine="30" fill="#FFF3B0" height="71.8789" id="BikeCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="294.208" x="336" y="575"/><ellipse cx="440.4092" cy="590" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M442.7998,594.7031 Q442.3154,594.9531 441.7842,595.0781 Q441.2686,595.2031 440.6904,595.2031 Q438.6279,595.2031 437.5342,593.8438 Q436.4561,592.4844 436.4561,589.9063 Q436.4561,587.3281 437.5342,585.9688 Q438.6279,584.6094 440.6904,584.6094 Q441.2686,584.6094 441.7998,584.7344 Q442.3311,584.8594 442.7998,585.0938 L442.7998,587.3438 Q442.2842,586.8594 441.7842,586.6406 Q441.2998,586.4219 440.7842,586.4219 Q439.6748,586.4219 439.1123,587.2969 Q438.5498,588.1719 438.5498,589.9063 Q438.5498,591.625 439.1123,592.5156 Q439.6748,593.3906 440.7842,593.3906 Q441.2998,593.3906 441.7842,593.1719 Q442.2842,592.9375 442.7998,592.4688 L442.7998,594.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="77.3896" x="459.4092" y="595.0928">BikeCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="337" x2="629.208" y1="605" y2="605"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="282.208" x="342" y="622.5625">+canDeliver(distanceKm: double): boolean</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="261.5566" x="342" y="639.502">+calculateETA(distanceKm: double): int</text></g><!--class CarCourier--><g id="elem_CarCourier"><rect codeLine="34" fill="#FFF3B0" height="71.8789" id="CarCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="294.208" x="7" y="575"/><ellipse cx="113.9282" cy="590" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M116.3188,594.7031 Q115.8345,594.9531 115.3032,595.0781 Q114.7876,595.2031 114.2095,595.2031 Q112.147,595.2031 111.0532,593.8438 Q109.9751,592.4844 109.9751,589.9063 Q109.9751,587.3281 111.0532,585.9688 Q112.147,584.6094 114.2095,584.6094 Q114.7876,584.6094 115.3188,584.7344 Q115.8501,584.8594 116.3188,585.0938 L116.3188,587.3438 Q115.8032,586.8594 115.3032,586.6406 Q114.8188,586.4219 114.3032,586.4219 Q113.1938,586.4219 112.6313,587.2969 Q112.0688,588.1719 112.0688,589.9063 Q112.0688,591.625 112.6313,592.5156 Q113.1938,593.3906 114.3032,593.3906 Q114.8188,593.3906 115.3032,593.1719 Q115.8032,592.9375 116.3188,592.4688 L116.3188,594.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="72.3516" x="132.9282" y="595.0928">CarCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="8" x2="300.208" y1="605" y2="605"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="282.208" x="13" y="622.5625">+canDeliver(distanceKm: double): boolean</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="261.5566" x="13" y="639.502">+calculateETA(distanceKm: double): int</text></g><!--class DroneCourier--><g id="elem_DroneCourier"><rect codeLine="38" fill="#FFF3B0" height="130.6973" id="DroneCourier" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="294.208" x="78" y="366"/><ellipse cx="176.5063" cy="381" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M178.897,385.7031 Q178.4126,385.9531 177.8813,386.0781 Q177.3657,386.2031 176.7876,386.2031 Q174.7251,386.2031 173.6313,384.8438 Q172.5532,383.4844 172.5532,380.9063 Q172.5532,378.3281 173.6313,376.9688 Q174.7251,375.6094 176.7876,375.6094 Q177.3657,375.6094 177.897,375.7344 Q178.4282,375.8594 178.897,376.0938 L178.897,378.3438 Q178.3813,377.8594 177.8813,377.6406 Q177.397,377.4219 176.8813,377.4219 Q175.772,377.4219 175.2095,378.2969 Q174.647,379.1719 174.647,380.9063 Q174.647,382.625 175.2095,383.5156 Q175.772,384.3906 176.8813,384.3906 Q177.397,384.3906 177.8813,384.1719 Q178.3813,383.9375 178.897,383.4688 L178.897,385.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="89.1953" x="195.5063" y="386.0928">DroneCourier</text><line style="stroke:#555555;stroke-width:0.5;" x1="79" x2="371.208" y1="396" y2="396"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="104.4941" x="84" y="413.5625">-droneId: String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="128.9326" x="84" y="430.502">-batteryPercent: int</text><line style="stroke:#555555;stroke-width:0.5;" x1="79" x2="371.208" y1="437.8789" y2="437.8789"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="139.7676" x="84" y="455.4414">+getContact(): String</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="282.208" x="84" y="472.3809">+canDeliver(distanceKm: double): boolean</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="261.5566" x="84" y="489.3203">+calculateETA(distanceKm: double): int</text></g><!--class DeliveryDispatcher--><g id="elem_DeliveryDispatcher"><rect codeLine="45" fill="#F1F1F1" height="54.9395" id="DeliveryDispatcher" rx="2.5" ry="2.5" style="stroke:#555555;stroke-width:0.5;" width="327.6426" x="254" y="7"/><ellipse cx="350.9102" cy="22" fill="#ADD1B2" rx="10" ry="10" style="stroke:#181818;stroke-width:1.0;"/><path d="M353.3008,26.7031 Q352.8164,26.9531 352.2852,27.0781 Q351.7695,27.2031 351.1914,27.2031 Q349.1289,27.2031 348.0352,25.8438 Q346.957,24.4844 346.957,21.9063 Q346.957,19.3281 348.0352,17.9688 Q349.1289,16.6094 351.1914,16.6094 Q351.7695,16.6094 352.3008,16.7344 Q352.832,16.8594 353.3008,17.0938 L353.3008,19.3438 Q352.7852,18.8594 352.2852,18.6406 Q351.8008,18.4219 351.2852,18.4219 Q350.1758,18.4219 349.6133,19.2969 Q349.0508,20.1719 349.0508,21.9063 Q349.0508,23.625 349.6133,24.5156 Q350.1758,25.3906 351.2852,25.3906 Q351.8008,25.3906 352.2852,25.1719 Q352.7852,24.9375 353.3008,24.4688 L353.3008,26.7031 Z " fill="#000000"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="125.8223" x="369.9102" y="27.0928">DeliveryDispatcher</text><line style="stroke:#555555;stroke-width:0.5;" x1="255" x2="580.6426" y1="37" y2="37"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="315.6426" x="260" y="54.5625">+findAvailableCourier(rest: Restaurant): Courier</text></g><!--link DeliveryDispatcher to Courier--><g id="link_DeliveryDispatcher_Courier"><path codeLine="48" d="M418,74.15 C418,94.54 418,105.81 418,133.72 " fill="none" id="DeliveryDispatcher-Courier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="418,62.15,414,68.15,418,74.15,422,68.15,418,62.15" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="#444444" points="418,139.72,422,130.72,418,134.72,414,130.72,418,139.72" style="stroke:#444444;stroke-width:1.0;"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="47.9199" x="419" y="106.5625">itsFleet</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="5.6943" x="412.5682" y="83.6203">1</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="7.0137" x="410.6649" y="128.695">*</text></g><!--link AuthService to User--><g id="link_AuthService_User"><path codeLine="49" d="M844,250.14 C844,279.18 844,320.73 844,359.72 " fill="none" id="AuthService-to-User" style="stroke:#444444;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="#444444" points="844,365.72,848,356.72,844,360.72,840,356.72,844,365.72" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link User to Customer--><g id="link_User_Customer"><path codeLine="50" d="M892.6543,512.4585 C910.7443,542.1985 921.87,560.48 935.72,583.25 " fill="none" id="User-backto-Customer" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="883.3,497.08,887.5281,515.5766,897.7804,509.3404,883.3,497.08" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link User to Driver--><g id="link_User_Driver"><path codeLine="51" d="M800.5089,512.9138 C784.4289,542.6538 774.78,560.48 762.47,583.25 " fill="none" id="User-backto-Driver" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="809.07,497.08,795.231,510.0601,805.7868,515.7675,809.07,497.08" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link Courier to HumanCourier--><g id="link_Courier_HumanCourier"><path codeLine="52" d="M448.9901,322.184 C460.0001,357.264 466.73,378.69 474.58,403.69 " fill="none" id="Courier-backto-HumanCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="443.6,305.01,443.2655,323.9807,454.7148,320.3873,443.6,305.01" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link Courier to DroneCourier--><g id="link_Courier_DroneCourier"><path codeLine="53" d="M329.7243,318.1746 C310.9443,338.3146 303.36,346.46 285.44,365.68 " fill="none" id="Courier-backto-DroneCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="342,305.01,325.3361,314.0828,334.1125,322.2665,342,305.01" style="stroke:#444444;stroke-width:1.0;"/></g><!--link HumanCourier to Driver--><g id="link_HumanCourier_Driver"><path codeLine="54" d="M522.67,459.07 C572.63,492.54 652.9844,546.3617 703.0744,579.9017 " fill="none" id="HumanCourier-to-Driver" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="#444444" points="708.06,583.24,702.8072,574.9088,703.9054,580.4581,698.3561,581.5563,708.06,583.24" style="stroke:#444444;stroke-width:1.0;"/><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="55.4258" x="649" y="541.5625">itsDriver</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="22.5928" x="507.0318" y="480.5228">0..1</text><text fill="#000000" font-family="Helvetica" font-size="14" lengthAdjust="spacing" textLength="5.6943" x="692.7571" y="572.2079">1</text></g><!--reverse link HumanCourier to BikeCourier--><g id="link_HumanCourier_BikeCourier"><path codeLine="55" d="M483,477.07 C483,507.92 483,540.92 483,574.98 " fill="none" id="HumanCourier-backto-BikeCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="483,459.07,477,477.07,489,477.07,483,459.07" style="stroke:#444444;stroke-width:1.0;"/></g><!--reverse link HumanCourier to CarCourier--><g id="link_HumanCourier_CarCourier"><path codeLine="56" d="M432.111,469.6876 C414.991,481.8376 408.7,485.6 389,497 C339.15,525.86 280.79,553.95 234.7,574.91 " fill="none" id="HumanCourier-backto-CarCourier" style="stroke:#444444;stroke-width:1.0;"/><polygon fill="none" points="446.79,459.27,428.6385,464.7946,435.5835,474.5806,446.79,459.27" style="stroke:#444444;stroke-width:1.0;"/></g><!--SRC=[lLJRRjGm47tFLvZq9R1DL8GggXMgjCso0b5L5QKVuDZ3heLZh-pn8bJwxqmkcpXjaE01NZRh6SyvnySpVg6Cq4424xQkhIbKg7N2Au-E2sH2S-_PlGV77XB6JWBz-oYNx0wTCjicOdWDyNg_ioOEBBQ0DxGdU_aaUDjiZAAFIKUs2hYx0tTG0bhEXRPRPRA6UTagEMNxxySgAg-irS3DK5y6ZxRk1USIj3g0-x6Iqe7tpzZMhacpa_9YyxOyxseqKHiFDw6k6iwXueahfGrEDRMRpURDrLbda0ZEWS5hZaicRQWqn55hugZogmDNcjDoF0OTEEmbHxYsWgEo9jCZrYdJ8mIT_M2Lf8g7exB7rjdI6gJ5nF5uY-1ctTcIIUMH6m6VwWXrb3AjqYAG5dZ_PJLVfmm-T-b3gBaPh8fidbTwl9ShzGtc3FuByN-ikBzExluluThH0CnHvhB9JCOihpWYjV4jEEfDx83ORs_x7uhkvscj_9wZsFLpjlYgZ1owkJzKHXD7KZ_JBm-E6oIiFaLuCqZfwvJPFBzawQjq62_YHx_H09Z4JqDHNBQlGT8-Jkz-vlam-L6e6-_aYDN6uewSPk8RIIQDcvuL1ObhjT6tVpLQQJt5P7kB5hNmJ7Pijry0]--></g></svg></div>
+  <p class="note legend" style="margin-top:2vh">
+    <span class="sw" style="background:#c8f7c5">Green</span> added: <code>HumanCourier</code>, <code>Driver</code>
+    &nbsp;&nbsp;·&nbsp;&nbsp;
+    <span class="sw" style="background:#fff3b0">Yellow</span> changed: <code>Courier</code> no longer extends <code>User</code>; every courier has <code>canDeliver()</code>
+  </p>
+</div>
+
+<div class="counter"></div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const counter = document.querySelector('.counter');
+  let current = 0;
+
+  function show(i) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides[current].classList.add('active');
+    counter.textContent = `${current + 1} / ${slides.length}`;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); show(current + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   { e.preventDefault(); show(current - 1); }
+  });
+
+  show(0);
+</script>
+</body>
+</html>
