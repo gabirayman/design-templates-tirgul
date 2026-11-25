@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Composite &amp; State</title>
+<style>
+  :root {
+    --ink: #1a2233;
+    --muted: #6b7385;
+    --line: #e4e7ee;
+    --accent: #2f5bd3;
+    --accent-bg: #e8eefc;
+    --bg: #ffffff;
+    --soft: #f6f7fa;
+    --good: #12805c;
+    --good-bg: #e5f6ee;
+    --bad: #c8372d;
+    --bad-bg: #fdeceb;
+    --warn-bg: #fff6dd;
+    --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  /* ---------- slide frame ---------- */
+  .slide { display: none; width: 100vw; height: 100vh; padding: 6vh 7vw 8vh; flex-direction: column; }
+  .slide.active { display: flex; }
+  .kicker { font-size: 0.95rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  h1 { font-size: 3.4rem; line-height: 1.1; font-weight: 700; }
+  h2 { font-size: 2.3rem; line-height: 1.2; font-weight: 700; margin-bottom: 4vh; }
+  h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+  p, li { font-size: 1.3rem; line-height: 1.55; }
+  .muted { color: var(--muted); }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+  ul.clean { list-style: none; }
+  ul.clean li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  ul.clean li:last-child { border-bottom: none; }
+
+  code { font-family: var(--mono); font-size: 0.92em; background: var(--soft); padding: 1px 6px; border-radius: 4px; }
+
+  /* ---------- layouts ---------- */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; align-items: center; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2vw; }
+  .tile { background: var(--soft); border-radius: 12px; padding: 26px 24px; }
+  .tile .big { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+  .tile p { font-size: 1.1rem; color: var(--muted); }
+  .tile.bad { background: var(--bad-bg); }
+  .tile.bad .big { color: var(--bad); }
+  .tile.good { background: var(--good-bg); }
+  .tile.good .big { color: var(--good); }
+  .tile.blue { background: var(--accent-bg); }
+  .tile.blue .big { color: var(--accent); }
+  .tile pre { margin-top: 14px; font-size: 0.98rem; padding: 16px 18px; }
+
+  .figure { display: flex; justify-content: center; align-items: center; min-height: 0; flex: 1; }
+  .figure svg { width: 100%; height: 100%; max-height: 64vh; }
+  .figure img { max-width: 100%; max-height: 68vh; object-fit: contain; }
+
+  .quote { font-size: 2.4rem; font-weight: 600; line-height: 1.3; border-left: 6px solid var(--accent); padding-left: 28px; margin-bottom: 5vh; }
+  .note { margin-top: 3vh; padding: 16px 22px; border-radius: 10px; background: var(--soft); font-size: 1.2rem; }
+  .note.warn { background: var(--warn-bg); }
+  .note.bad { background: var(--bad-bg); }
+  .note.good { background: var(--good-bg); }
+
+  /* ---------- tables ---------- */
+  .check { width: 100%; border-collapse: collapse; }
+  .check th { text-align: left; font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 10px 10px; border-bottom: 2px solid var(--line); }
+  .check td { padding: 14px 10px; border-bottom: 1px solid var(--line); font-size: 1.25rem; }
+  .check td.mono { font-family: var(--mono); font-size: 1.1rem; }
+  .yes { color: var(--good); font-weight: 700; }
+  .no { color: var(--bad); font-weight: 700; }
+
+  /* ---------- code ---------- */
+  pre { background: #182033; color: #e8ebf2; border-radius: 12px; padding: 22px 26px; font-family: var(--mono); font-size: 1.05rem; line-height: 1.55; overflow: hidden; }
+  pre .r { background: var(--bad); color: #fff; display: block; margin: 0 -26px; padding: 0 26px; }
+  pre .g { background: var(--good); color: #fff; display: block; margin: 0 -26px; padding: 0 26px; }
+  pre .b { background: #2f4c9e; color: #fff; display: block; margin: 0 -26px; padding: 0 26px; }
+  pre .c { color: #8e98ad; }
+  pre .k { color: #f3c56b; }
+  .tile pre .r, .tile pre .g, .tile pre .b { margin: 0 -18px; padding: 0 18px; }
+  pre.out { background: var(--soft); color: var(--ink); border: 1px solid var(--line); }
+
+  .tag { display: inline-block; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 999px; margin-bottom: 14px; }
+  .tag.bad { background: var(--bad-bg); color: var(--bad); }
+  .tag.good { background: var(--good-bg); color: var(--good); }
+  .tag.blue { background: var(--accent-bg); color: var(--accent); }
+
+  /* ---------- flow (step list) ---------- */
+  .flow { list-style: none; counter-reset: step; }
+  .flow li { counter-increment: step; padding: 10px 0 10px 52px; position: relative; border-bottom: 1px solid var(--line); }
+  .flow li:last-child { border-bottom: none; }
+  .flow li::before { content: counter(step); position: absolute; left: 0; top: 10px; width: 34px; height: 34px; border-radius: 50%; background: var(--soft); color: var(--accent); font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; }
+  .flow li.boom::before { background: var(--bad); color: #fff; content: "✘"; }
+  .flow .st { font-family: var(--mono); font-size: 1.05rem; color: var(--accent); font-weight: 700; }
+
+  /* ---------- phone screen ---------- */
+  .screen { border: 2px solid var(--line); border-radius: 22px; padding: 22px 24px; width: 100%; max-width: 400px; }
+  .screen .app { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .screen .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 1.2rem; }
+  .screen .row:last-child { border-bottom: none; }
+  .screen .row.off { color: #b4b9c6; text-decoration: line-through; }
+  .screen .row.off .p::after { content: " · sold out"; text-decoration: none; font-size: 0.9rem; color: var(--bad); }
+
+  .divider h1 { font-size: 3rem; }
+  .divider .num { font-size: 1.1rem; font-weight: 700; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px; }
+
+  /* ---------- svg diagrams ---------- */
+  svg text { font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
+  svg .box { fill: #f1f1f1; stroke: #555; stroke-width: 1; }
+  svg .box.leaf { fill: #f6f7fa; }
+  svg .box.comp { fill: #e8eefc; stroke: #2f5bd3; }
+  svg .box.red { fill: #fdeceb; stroke: #c8372d; }
+  svg .box.dim { fill: #fafafa; stroke: #c9cdd6; }
+  svg .t { font-size: 17px; font-weight: 700; fill: #1a2233; }
+  svg .m { font-size: 15px; fill: #1a2233; font-family: Consolas, 'Cascadia Code', monospace; }
+  svg .s { font-size: 13px; fill: #6b7385; }
+  svg .ln { stroke: #444; stroke-width: 1.3; fill: none; }
+  svg .dash { stroke-dasharray: 7 6; }
+
+  .counter { position: fixed; bottom: 3vh; right: 3vw; font-size: 0.95rem; color: #a3aabb; font-variant-numeric: tabular-nums; }
+
+  @media print {
+    body { overflow: visible; }
+    .slide { display: flex !important; page-break-after: always; }
+    .counter { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1 · TITLE -->
+<div class="slide active">
+  <div class="body">
+    <div class="kicker">BiteExpress · Recitation 6</div>
+    <h1>Composite &amp; State</h1>
+    <p class="muted" style="font-size:1.6rem; margin-top:14px">One item or a whole combo? &nbsp;One order, many states.</p>
+    <p style="margin-top:6vh">Today: combo deals &nbsp;·&nbsp; the order statechart in code &nbsp;·&nbsp; both together</p>
+  </div>
+</div>
+
+<!-- 2 · DIVIDER: COMPOSITE -->
+<div class="slide divider">
+  <div class="body">
+    <div class="num">Part 1 · Structural pattern</div>
+    <h1>Composite</h1>
+    <p class="muted" style="font-size:1.5rem; margin-top:14px">Treat one object and a group of objects the same way.</p>
+  </div>
+</div>
+
+<!-- 3 · THE PROBLEM -->
+<div class="slide">
+  <div class="kicker">Part 1 · Composite</div>
+  <h2>The cart has items — and combos</h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.2fr 1fr">
+    <div>
+      <span class="tag bad">Without Composite</span>
+<pre>double total = 0;
+for (Object line : cart) {
+<span class="r">    if (line instanceof MenuItem i)</span>        total += i.getPrice();
+<span class="r">    else if (line instanceof Combo c)</span>        for (MenuItem i : c.getItems())
+            total += i.getPrice();
+}</pre>
+    </div>
+    <div>
+      <ul class="clean">
+        <li>Every client must know about <b>both</b> types</li>
+        <li>Same loop again for prep time, printing, ...</li>
+        <li>A combo <b>inside</b> a combo? Another nested loop.</li>
+      </ul>
+      <p class="note warn">Family Deal = Burger Meal + Salad.<br>Burger Meal = Burger + Fries + Cola.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 4 · THE PATTERN -->
+<div class="slide">
+  <div class="kicker">Part 1 · Composite</div>
+  <h2>The pattern</h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.6fr 1fr">
+    <svg viewBox="0 0 760 470" preserveAspectRatio="xMidYMid meet" style="width:100%; max-height:66vh">
+      <defs>
+        <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="14" markerHeight="14" orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 Z" fill="#fff" stroke="#444" stroke-width="1.2"/></marker>
+        <marker id="open" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" orient="auto"><path d="M0,0 L12,6 L0,12" fill="none" stroke="#444" stroke-width="1.4"/></marker>
+        <marker id="dia" viewBox="0 0 20 12" refX="1" refY="6" markerWidth="22" markerHeight="13" orient="auto-start-reverse"><path d="M1,6 L10,1 L19,6 L10,11 Z" fill="#fff" stroke="#444" stroke-width="1.2"/></marker>
+      </defs>
+      <!-- Client -->
+      <rect class="box" x="10" y="60" width="120" height="50" rx="3"/>
+      <text class="t" x="70" y="91" text-anchor="middle">Cart</text>
+      <text class="s" x="70" y="132" text-anchor="middle">client</text>
+      <line class="ln" x1="130" y1="85" x2="258" y2="85" marker-end="url(#open)"/>
+      <!-- Component -->
+      <rect class="box" x="260" y="20" width="300" height="150" rx="3"/>
+      <text class="s" x="410" y="42" text-anchor="middle">«interface»</text>
+      <text class="t" x="410" y="64" text-anchor="middle" font-style="italic">MenuComponent</text>
+      <line x1="260" y1="76" x2="560" y2="76" stroke="#555"/>
+      <text class="m" x="276" y="102">+getPrice(): double</text>
+      <text class="m" x="276" y="128">+getPrepMinutes(): int</text>
+      <text class="m" x="276" y="154">+print(indent): void</text>
+      <!-- Leaf -->
+      <rect class="box leaf" x="40" y="300" width="260" height="110" rx="3"/>
+      <text class="t" x="170" y="328" text-anchor="middle">MenuItem</text>
+      <line x1="40" y1="340" x2="300" y2="340" stroke="#555"/>
+      <text class="m" x="56" y="366">-price: double</text>
+      <text class="m" x="56" y="392">+getPrice(): double</text>
+      <text class="s" x="170" y="440" text-anchor="middle">Leaf</text>
+      <!-- Composite -->
+      <rect class="box comp" x="420" y="300" width="320" height="136" rx="3"/>
+      <text class="t" x="580" y="328" text-anchor="middle">Combo</text>
+      <line x1="420" y1="340" x2="740" y2="340" stroke="#2f5bd3"/>
+      <text class="m" x="436" y="366">-children: List</text>
+      <text class="m" x="436" y="392">+add(c: MenuComponent)</text>
+      <text class="m" x="436" y="418">+getPrice(): double</text>
+      <text class="s" x="580" y="462" text-anchor="middle">Composite</text>
+      <!-- realization -->
+      <path class="ln dash" d="M170,300 L170,240 L360,240 L360,172" marker-end="url(#tri)"/>
+      <path class="ln dash" d="M520,300 L520,240 L360,240"/>
+      <!-- aggregation: Combo has many MenuComponent -->
+      <path class="ln" d="M700,298 L700,95 L562,95" marker-start="url(#dia)" marker-end="url(#open)"/>
+      <text class="s" x="692" y="200" text-anchor="end" style="font-size:15px; fill:#1a2233">children</text>
+      <text class="s" x="572" y="88" style="font-size:15px; fill:#1a2233">1..*</text>
+    </svg>
+    <div>
+      <ul class="clean">
+        <li><b>Component</b> — the common interface</li>
+        <li><b>Leaf</b> — does the work itself</li>
+        <li><b>Composite</b> — loops over its children</li>
+      </ul>
+      <p class="note">A Combo <b>is</b> a MenuComponent<br>and <b>has</b> MenuComponents.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 5 · THE TREE -->
+<div class="slide">
+  <div class="kicker">Part 1 · Composite</div>
+  <h2>A combo inside a combo is just a tree</h2>
+  <div class="figure">
+    <svg viewBox="0 0 900 360" preserveAspectRatio="xMidYMid meet">
+      <g class="ln">
+        <line x1="450" y1="78" x2="270" y2="160"/>
+        <line x1="450" y1="78" x2="650" y2="160"/>
+        <line x1="270" y1="218" x2="110" y2="290"/>
+        <line x1="270" y1="218" x2="270" y2="290"/>
+        <line x1="270" y1="218" x2="430" y2="290"/>
+      </g>
+      <rect class="box comp" x="350" y="20" width="200" height="58" rx="10"/>
+      <text class="t" x="450" y="47" text-anchor="middle">Family Deal</text>
+      <text class="s" x="450" y="67" text-anchor="middle">Combo · −15%</text>
+      <rect class="box comp" x="170" y="160" width="200" height="58" rx="10"/>
+      <text class="t" x="270" y="187" text-anchor="middle">Burger Meal</text>
+      <text class="s" x="270" y="207" text-anchor="middle">Combo · −10%</text>
+      <rect class="box leaf" x="560" y="160" width="180" height="58" rx="10"/>
+      <text class="t" x="650" y="187" text-anchor="middle">Large Salad</text>
+      <text class="s" x="650" y="207" text-anchor="middle">₪45 · 10 min</text>
+      <rect class="box leaf" x="30" y="290" width="160" height="58" rx="10"/>
+      <text class="t" x="110" y="317" text-anchor="middle">Burger</text>
+      <text class="s" x="110" y="337" text-anchor="middle">₪52 · 15 min</text>
+      <rect class="box leaf" x="190" y="290" width="160" height="58" rx="10" transform="translate(0,0)"/>
+      <text class="t" x="270" y="317" text-anchor="middle">Fries</text>
+      <text class="s" x="270" y="337" text-anchor="middle">₪18 · 8 min</text>
+      <rect class="box leaf" x="350" y="290" width="160" height="58" rx="10"/>
+      <text class="t" x="430" y="317" text-anchor="middle">Cola</text>
+      <text class="s" x="430" y="337" text-anchor="middle">₪12 · 0 min</text>
+      <rect x="640" y="270" width="18" height="18" class="box comp"/><text class="s" x="666" y="284" style="font-size:15px">Composite</text>
+      <rect x="760" y="270" width="18" height="18" class="box leaf"/><text class="s" x="786" y="284" style="font-size:15px">Leaf</text>
+    </svg>
+  </div>
+</div>
+
+<!-- 6 · CODE: COMPONENT + LEAF -->
+<div class="slide">
+  <div class="kicker">Part 1 · Composite</div>
+  <h2>Component and Leaf</h2>
+  <div class="grid-2" style="flex:1; align-items:start; margin-top:1vh">
+    <div>
+      <span class="tag blue">Component</span>
+<pre>public interface MenuComponent {
+    String getName();
+    double getPrice();
+    int    getPrepMinutes();
+    void   print(String indent);
+}</pre>
+    </div>
+    <div>
+      <span class="tag blue">Leaf</span>
+<pre>public class MenuItem implements MenuComponent {
+    private String name;
+    private double price;
+    private int    prepMinutes;
+
+    public double getPrice() {
+        return price;
+    }
+    public int getPrepMinutes() {
+        return prepMinutes;
+    }
+    public void print(String indent) {
+        System.out.println(indent + name);
+    }
+}</pre>
+    </div>
+  </div>
+</div>
+
+<!-- 7 · CODE: COMPOSITE -->
+<div class="slide">
+  <div class="kicker">Part 1 · Composite</div>
+  <h2>The Composite</h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.4fr 1fr">
+<pre>public class Combo implements MenuComponent {
+    private String name;
+    private double discount;
+<span class="b">    private List&lt;MenuComponent&gt; children = new ArrayList&lt;&gt;();</span>
+    public void add(MenuComponent c) { children.add(c); }
+
+    public double getPrice() {
+        double sum = 0;
+<span class="g">        for (MenuComponent c : children)</span><span class="g">            sum += c.getPrice();</span>        return sum * (1 - discount);
+    }
+
+    public void print(String indent) {
+        System.out.println(indent + name);
+<span class="g">        for (MenuComponent c : children)</span><span class="g">            c.print(indent + "  ");</span>    }
+}</pre>
+    <div>
+      <ul class="clean">
+        <li>Holds a list of the <b>interface</b> — not of <code>MenuItem</code></li>
+        <li>So a child can be another <code>Combo</code></li>
+        <li><code>c.getPrice()</code> — the child decides how</li>
+      </ul>
+      <p class="note">The recursion lives here — the client never sees it.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 8 · CLIENT -->
+<div class="slide">
+  <div class="kicker">Part 1 · Composite</div>
+  <h2>The client doesn't care</h2>
+  <div class="grid-2" style="flex:1; align-items:start; margin-top:1vh">
+    <div>
+<pre>Combo burgerMeal = new Combo("Burger Meal", 0.10);
+burgerMeal.add(new MenuItem("Burger", 52, 15));
+burgerMeal.add(new MenuItem("Fries",  18,  8));
+burgerMeal.add(new MenuItem("Cola",   12,  0));
+
+Combo familyDeal = new Combo("Family Deal", 0.15);
+familyDeal.add(burgerMeal);
+familyDeal.add(new MenuItem("Large Salad", 45, 10));
+
+<span class="c">// Cart</span>
+<span class="g">for (MenuComponent line : cart)</span><span class="g">    total += line.getPrice();</span></pre>
+    </div>
+    <div>
+      <span class="tag good">familyDeal.print("")</span>
+<pre class="out">Family Deal      ₪100.98
+  Burger Meal     ₪73.80
+    Burger        ₪52.00
+    Fries         ₪18.00
+    Cola          ₪12.00
+  Large Salad     ₪45.00</pre>
+      <p class="note good">No <code>instanceof</code>. New combo types need no change in the cart — OCP.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 9 · COMPOSITE DECIDES -->
+<div class="slide">
+  <div class="kicker">Part 1 · Composite</div>
+  <h2>The Composite decides what "combine" means</h2>
+  <div class="body">
+    <div class="grid-3">
+      <div class="tile">
+        <div class="big">Price</div>
+        <p>Sum, then discount</p>
+<pre>sum * (1 - discount)</pre>
+      </div>
+      <div class="tile">
+        <div class="big">Prep time</div>
+        <p>Kitchen works in parallel</p>
+<pre>max = Math.max(max,
+    c.getPrepMinutes());</pre>
+      </div>
+      <div class="tile">
+        <div class="big">Vegan?</div>
+        <p>Only if every child is</p>
+<pre>for (c : children)
+    if (!c.isVegan())
+        return false;
+return true;</pre>
+      </div>
+    </div>
+    <p class="note">Not always "add up the children". Each operation picks its own rule.</p>
+  </div>
+</div>
+
+<!-- 10 · DEGENERATE -->
+<div class="slide">
+  <div class="kicker">Part 1 · Composite</div>
+  <h2>Variant: only one level</h2>
+  <div class="grid-2" style="flex:1">
+    <div>
+      <span class="tag bad">Can nest</span>
+<pre>List&lt;<span class="k">MenuComponent</span>&gt; children;</pre>
+      <p class="muted" style="margin-top:2vh">A combo can contain combos — a tree of any depth.</p>
+      <div style="height:4vh"></div>
+      <span class="tag good">One level only</span>
+<pre>List&lt;<span class="k">MenuItem</span>&gt; children;</pre>
+      <p class="muted" style="margin-top:2vh">A combo contains only single items.</p>
+    </div>
+    <div>
+      <p class="note">Same idea, smaller type. Pick it when the business rule is "no combos inside combos" — the compiler enforces it.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 11 · DIVIDER: STATE -->
+<div class="slide divider">
+  <div class="body">
+    <div class="num">Part 2 · Behavioral pattern</div>
+    <h1>State</h1>
+    <p class="muted" style="font-size:1.5rem; margin-top:14px">Same call, different behavior — depending on the state.</p>
+  </div>
+</div>
+
+<!-- 12 · RECALL STATECHART -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>Recitation 1: the Order statechart</h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.9fr 1fr">
+    <div class="figure"><img src="data:image/png;base64,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" alt="Order statechart"></div>
+    <div>
+      <h3>What does <code>cancel()</code> do?</h3>
+      <table class="check">
+        <tr><td>Created</td><td class="muted">just cancel</td></tr>
+        <tr><td>Paid</td><td class="muted">refund, cancel</td></tr>
+        <tr><td>Preparing</td><td class="muted">only in grace period</td></tr>
+        <tr><td>OutForDelivery</td><td class="no">not allowed</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 13 · NAIVE SWITCH -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>The naive way: a switch in every method</h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.3fr 1fr">
+<pre>public void cancel() {
+<span class="r">    switch (status) {</span>        case CREATED:   status = CANCELLED; break;
+        case PAID:      refund();
+                        status = CANCELLED; break;
+        case PREPARING: if (withinGracePeriod()) {
+                            refund();
+                            status = CANCELLED;
+                        } break;
+        default: throw new IllegalStateException();
+    }
+}
+<span class="c">// ...and again in pay(), accept(),
+//    pickedUp(), delivered()</span></pre>
+    <div>
+      <ul class="clean">
+        <li>6 states × 6 events in <b>one</b> class</li>
+        <li>New state → edit <b>every</b> method</li>
+        <li>Each state's logic is scattered across the class</li>
+      </ul>
+      <p class="note bad">Violates SRP and OCP.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 14 · THE PATTERN -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>The pattern</h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.7fr 1fr">
+    <svg viewBox="0 0 860 400" preserveAspectRatio="xMidYMid meet" style="width:100%; max-height:64vh">
+      <defs>
+        <marker id="tri2" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="14" markerHeight="14" orient="auto"><path d="M0,0 L12,6 L0,12 Z" fill="#fff" stroke="#444" stroke-width="1.2"/></marker>
+        <marker id="open2" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" orient="auto"><path d="M0,0 L12,6 L0,12" fill="none" stroke="#444" stroke-width="1.4"/></marker>
+      </defs>
+      <!-- Context -->
+      <rect class="box comp" x="10" y="20" width="230" height="160" rx="3"/>
+      <text class="t" x="125" y="48" text-anchor="middle">Order</text>
+      <line x1="10" y1="60" x2="240" y2="60" stroke="#2f5bd3"/>
+      <text class="m" x="24" y="86">-state: OrderState</text>
+      <line x1="10" y1="98" x2="240" y2="98" stroke="#2f5bd3"/>
+      <text class="m" x="24" y="124">+cancel()</text>
+      <text class="m" x="24" y="150">+pay() ...</text>
+      <text class="s" x="125" y="204" text-anchor="middle">Context</text>
+      <!-- association -->
+      <line class="ln" x1="240" y1="90" x2="438" y2="90" marker-end="url(#open2)"/>
+      <text class="s" x="330" y="80" text-anchor="middle" style="font-size:15px; fill:#1a2233">state</text>
+      <!-- State -->
+      <rect class="box" x="440" y="20" width="300" height="140" rx="3"/>
+      <text class="t" x="590" y="48" text-anchor="middle" font-style="italic">OrderState</text>
+      <line x1="440" y1="60" x2="740" y2="60" stroke="#555"/>
+      <text class="m" x="456" y="86">+evCancel(o: Order)</text>
+      <text class="m" x="456" y="112">+evPaid(o: Order)</text>
+      <text class="m" x="456" y="138">+evAccept(o: Order) ...</text>
+      <!-- children -->
+      <g>
+        <rect class="box leaf" x="20"  y="300" width="120" height="44" rx="3"/><text class="m" x="80"  y="327" text-anchor="middle">Created</text>
+        <rect class="box leaf" x="160" y="300" width="120" height="44" rx="3"/><text class="m" x="220" y="327" text-anchor="middle">Paid</text>
+        <rect class="box leaf" x="300" y="300" width="120" height="44" rx="3"/><text class="m" x="360" y="327" text-anchor="middle">Preparing</text>
+        <rect class="box leaf" x="440" y="300" width="150" height="44" rx="3"/><text class="m" x="515" y="327" text-anchor="middle">OutForDelivery</text>
+        <rect class="box leaf" x="610" y="300" width="110" height="44" rx="3"/><text class="m" x="665" y="327" text-anchor="middle">Delivered</text>
+        <rect class="box leaf" x="740" y="300" width="110" height="44" rx="3"/><text class="m" x="795" y="327" text-anchor="middle">Cancelled</text>
+      </g>
+      <path class="ln" d="M80,300 L80,250 L795,250 L795,300"/>
+      <path class="ln" d="M220,300 L220,250 M360,300 L360,250 M515,300 L515,250 M665,300 L665,250"/>
+      <line class="ln" x1="590" y1="250" x2="590" y2="162" marker-end="url(#tri2)"/>
+      <text class="s" x="435" y="380" text-anchor="middle">one class per state</text>
+    </svg>
+    <div>
+      <ul class="clean">
+        <li><b>Context</b> holds the current state and delegates to it</li>
+        <li><b>State</b> — one method per event</li>
+        <li><b>Concrete state</b> — the behavior of one state, and where to go next</li>
+      </ul>
+<pre style="margin-top:2vh">public void cancel() {
+    state.evCancel(this);
+}</pre>
+    </div>
+  </div>
+</div>
+
+<!-- 15 · MAPPING -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>From statechart to code</h2>
+  <div class="body">
+    <table class="check">
+      <tr><th>Statechart</th><th>Code</th><th>Example</th></tr>
+      <tr><td>State</td><td>A class</td><td class="mono">class PaidState extends OrderState</td></tr>
+      <tr><td>Event</td><td>A method of the state</td><td class="mono">evCancel(Order o)</td></tr>
+      <tr><td>Transition</td><td>Replace the state object</td><td class="mono">o.setState(new CancelledState())</td></tr>
+      <tr><td>Guard <code>[ ]</code></td><td>An <code>if</code></td><td class="mono">if (o.withinGracePeriod())</td></tr>
+      <tr><td>Action <code>/ </code></td><td>A call</td><td class="mono">o.refund()</td></tr>
+      <tr><td>No arrow for this event</td><td>Not allowed</td><td class="mono">throw IllegalStateException</td></tr>
+    </table>
+    <p class="note">Every arrow in the diagram becomes one method.</p>
+  </div>
+</div>
+
+<!-- 16 · BASE CLASS -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>The base state: "no arrow" by default</h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.5fr 1fr">
+<pre>public abstract class OrderState {
+    void evPaid(Order o)          { illegal("evPaid"); }
+    void evPaymentFailed(Order o) { illegal("evPaymentFailed"); }
+    void evAccept(Order o)        { illegal("evAccept"); }
+    void evPickedUp(Order o)      { illegal("evPickedUp"); }
+    void evDelivered(Order o)     { illegal("evDelivered"); }
+    void evCancel(Order o)        { illegal("evCancel"); }
+
+    private void illegal(String ev) {
+        throw new IllegalStateException(
+            ev + " not allowed in " +
+            getClass().getSimpleName());
+    }
+}</pre>
+    <div>
+      <ul class="clean">
+        <li>Each state overrides <b>only</b> its arrows</li>
+        <li>Everything else is blocked automatically</li>
+      </ul>
+      <p class="note">An interface works too — but then every state must implement all 6 events.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 17 · CREATED + PAID -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>Created and Paid</h2>
+  <div class="grid-2" style="flex:1; align-items:start; margin-top:1vh">
+    <div>
+      <span class="tag blue">Created</span>
+<pre>class CreatedState extends OrderState {
+    void evPaid(Order o) {
+        o.setState(new PaidState());
+    }
+    void evPaymentFailed(Order o) {
+        o.showError();       <span class="c">// stay here</span>
+    }
+    void evCancel(Order o) {
+        o.setState(new CancelledState());
+    }
+}</pre>
+    </div>
+    <div>
+      <span class="tag blue">Paid</span>
+<pre>class PaidState extends OrderState {
+    void evAccept(Order o) {
+        o.setState(new PreparingState());
+    }
+    void evCancel(Order o) {
+        o.refund();
+        o.setState(new CancelledState());
+    }
+}</pre>
+      <p class="note">Same event, <code>evCancel</code> — different behavior per class.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 18 · PREPARING + REST -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>Preparing: guard, action, transition</h2>
+  <div class="grid-2" style="flex:1; align-items:start; margin-top:1vh">
+    <div>
+      <span class="tag blue">Preparing</span>
+<pre>class PreparingState extends OrderState {
+    void evPickedUp(Order o) {
+        o.setState(new OutForDeliveryState());
+    }
+    void evCancel(Order o) {
+<span class="b">        if (o.withinGracePeriod()) {     // guard</span><span class="g">            o.refund();                  // action</span><span class="k">            o.setState(new CancelledState()); // transition</span>
+        }
+    }
+}</pre>
+    </div>
+    <div>
+      <span class="tag blue">The rest</span>
+<pre>class OutForDeliveryState extends OrderState {
+    void evDelivered(Order o) {
+        o.notifyCustomer();
+        o.setState(new DeliveredState());
+    }
+}
+
+class DeliveredState extends OrderState { }
+class CancelledState extends OrderState { }</pre>
+      <p class="note">Final states override nothing — every event is blocked.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 19 · CONTEXT -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>The Order (Context)</h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.3fr 1fr">
+<pre>public class Order {
+<span class="b">    private OrderState state = new CreatedState();</span>
+    void setState(OrderState s) { state = s; }
+
+    public void pay()       { state.evPaid(this); }
+    public void accept()    { state.evAccept(this); }
+    public void pickedUp()  { state.evPickedUp(this); }
+    public void delivered() { state.evDelivered(this); }
+    public void cancel()    { state.evCancel(this); }
+
+    void refund()               { ... }
+    void notifyCustomer()       { ... }
+    void showError()            { ... }
+    boolean withinGracePeriod() { ... }
+}</pre>
+    <div>
+      <ul class="clean">
+        <li>No <code>switch</code>, no <code>if (status == ...)</code></li>
+        <li>Every public method is one line</li>
+        <li>Passes <code>this</code> so the state can change it</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 20 · RUN -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>A customer changes their mind</h2>
+  <div class="grid-2" style="flex:1">
+<pre style="font-size:1.25rem">Order order = new Order();
+order.pay();
+order.accept();
+order.cancel();     <span class="c">// within grace period</span>
+order.pickedUp();</pre>
+    <ol class="flow">
+      <li><span class="st">Created</span> → <span class="st">Paid</span></li>
+      <li><span class="st">Paid</span> → <span class="st">Preparing</span></li>
+      <li><code>refund()</code>, <span class="st">Preparing</span> → <span class="st">Cancelled</span></li>
+      <li class="boom">evPickedUp not allowed in CancelledState</li>
+    </ol>
+  </div>
+</div>
+
+<!-- 21 · WHAT WE GAINED -->
+<div class="slide">
+  <div class="kicker">Part 2 · State</div>
+  <h2>What we gained</h2>
+  <div class="body">
+    <div class="grid-3">
+      <div class="tile good"><div class="big">SRP</div><p>Each state's behavior lives in one small class.</p></div>
+      <div class="tile good"><div class="big">OCP</div><p>Scheduled orders? Add <code>ScheduledState</code>, change one arrow in <code>CreatedState</code>. Nothing else.</p></div>
+      <div class="tile good"><div class="big">Safe</div><p>Illegal events can't slip through — a courier can't pick up a cancelled order.</p></div>
+    </div>
+    <p class="note">Recitation 4: these states have no fields — each could be a <b>Singleton</b> instead of <code>new</code> on every transition. Data that must survive a transition belongs in the <code>Order</code>.</p>
+  </div>
+</div>
+
+<!-- 22 · DIVIDER: TOGETHER -->
+<div class="slide divider">
+  <div class="body">
+    <div class="num">Part 3</div>
+    <h1>Composite + State</h1>
+    <p class="muted" style="font-size:1.5rem; margin-top:14px">The fries just sold out.</p>
+  </div>
+</div>
+
+<!-- 23 · ITEM STATE -->
+<div class="slide">
+  <div class="kicker">Part 3 · Together</div>
+  <h2>Every item has a state</h2>
+  <div class="grid-2" style="flex:1; align-items:start; margin-top:1vh">
+    <div>
+      <span class="tag blue">State</span>
+<pre>abstract class ItemState {
+    boolean isAvailable()      { return false; }
+    void evSoldOut(MenuItem i) { }
+    void evRestock(MenuItem i) { }
+}
+class AvailableState extends ItemState {
+    boolean isAvailable() { return true; }
+    void evSoldOut(MenuItem i) {
+        i.setState(new SoldOutState());
+    }
+}
+class SoldOutState extends ItemState {
+    void evRestock(MenuItem i) {
+        i.setState(new AvailableState());
+    }
+}</pre>
+    </div>
+    <div>
+      <span class="tag blue">Leaf = Context</span>
+<pre>class MenuItem implements MenuComponent {
+<span class="b">    private ItemState state = new AvailableState();</span>    public boolean isAvailable() {
+        return state.isAvailable();
+    }
+}</pre>
+      <span class="tag blue" style="margin-top:3vh">Composite</span>
+<pre>class Combo implements MenuComponent {
+    public boolean isAvailable() {
+<span class="g">        for (MenuComponent c : children)</span><span class="g">            if (!c.isAvailable()) return false;</span>        return true;
+    }
+}</pre>
+    </div>
+  </div>
+</div>
+
+<!-- 24 · FRIES SOLD OUT -->
+<div class="slide">
+  <div class="kicker">Part 3 · Together</div>
+  <h2><code>fries.soldOut()</code></h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.4fr 1fr">
+    <svg viewBox="0 0 640 360" preserveAspectRatio="xMidYMid meet" style="width:100%; max-height:62vh">
+      <g class="ln">
+        <line x1="320" y1="78" x2="190" y2="160"/>
+        <line x1="320" y1="78" x2="470" y2="160"/>
+        <line x1="190" y1="218" x2="80" y2="290"/>
+        <line x1="190" y1="218" x2="230" y2="290" style="stroke:#c8372d; stroke-width:2.5"/>
+        <line x1="190" y1="218" x2="380" y2="290"/>
+      </g>
+      <rect class="box red" x="220" y="20" width="200" height="58" rx="10"/>
+      <text class="t" x="320" y="47" text-anchor="middle">Family Deal</text>
+      <text class="s" x="320" y="67" text-anchor="middle" style="fill:#c8372d">isAvailable() → false</text>
+      <rect class="box red" x="90" y="160" width="200" height="58" rx="10"/>
+      <text class="t" x="190" y="187" text-anchor="middle">Burger Meal</text>
+      <text class="s" x="190" y="207" text-anchor="middle" style="fill:#c8372d">isAvailable() → false</text>
+      <rect class="box leaf" x="390" y="160" width="160" height="58" rx="10"/>
+      <text class="t" x="470" y="187" text-anchor="middle">Large Salad</text>
+      <text class="s" x="470" y="207" text-anchor="middle">Available</text>
+      <rect class="box leaf" x="10" y="290" width="140" height="58" rx="10"/>
+      <text class="t" x="80" y="317" text-anchor="middle">Burger</text>
+      <text class="s" x="80" y="337" text-anchor="middle">Available</text>
+      <rect class="box red" x="160" y="290" width="140" height="58" rx="10" style="stroke-width:2.5"/>
+      <text class="t" x="230" y="317" text-anchor="middle" style="fill:#c8372d">Fries</text>
+      <text class="s" x="230" y="337" text-anchor="middle" style="fill:#c8372d; font-weight:700">SoldOut</text>
+      <rect class="box leaf" x="310" y="290" width="140" height="58" rx="10"/>
+      <text class="t" x="380" y="317" text-anchor="middle">Cola</text>
+      <text class="s" x="380" y="337" text-anchor="middle">Available</text>
+    </svg>
+    <div>
+      <div class="screen">
+        <div class="app">BiteExpress · Menu</div>
+        <div class="row off"><span>Family Deal</span><span class="p">₪100.98</span></div>
+        <div class="row off"><span>Burger Meal</span><span class="p">₪73.80</span></div>
+        <div class="row off"><span>Fries</span><span class="p">₪18</span></div>
+        <div class="row"><span>Burger</span><span class="p">₪52</span></div>
+        <div class="row"><span>Large Salad</span><span class="p">₪45</span></div>
+      </div>
+      <p class="note good">One leaf changed state. Every combo above it updated — <b>zero</b> changes in <code>Combo</code>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 25 · HIERARCHICAL STATECHART -->
+<div class="slide">
+  <div class="kicker">Part 3 · Together</div>
+  <h2>A state that contains states</h2>
+  <div class="grid-2" style="flex:1; grid-template-columns: 1.3fr 1fr">
+    <svg viewBox="0 0 680 340" preserveAspectRatio="xMidYMid meet" style="width:100%; height:auto; max-height:62vh">
+      <defs>
+        <marker id="arr3" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto"><path d="M0,0 L12,6 L0,12 Z" fill="#444"/></marker>
+      </defs>
+      <rect x="10" y="20" width="380" height="300" rx="20" fill="#e8eefc" stroke="#2f5bd3" stroke-width="2"/>
+      <text class="t" x="34" y="56" style="font-size:20px">Active</text>
+      <rect class="box" x="60" y="90" width="150" height="56" rx="14"/><text class="t" x="135" y="124" text-anchor="middle">Paid</text>
+      <rect class="box" x="190" y="230" width="170" height="56" rx="14"/><text class="t" x="275" y="264" text-anchor="middle">Preparing</text>
+      <path class="ln" d="M135,146 C135,210 150,250 186,258" marker-end="url(#arr3)"/>
+      <text class="s" x="48" y="215" style="font-size:16px; fill:#1a2233">evAccept</text>
+      <rect class="box" x="510" y="142" width="160" height="56" rx="14"/><text class="t" x="590" y="176" text-anchor="middle">Cancelled</text>
+      <path class="ln" d="M390,170 L506,170" marker-end="url(#arr3)" style="stroke-width:2"/>
+      <text class="s" x="448" y="132" text-anchor="middle" style="font-size:16px; fill:#1a2233">evCancel</text>
+      <text class="s" x="448" y="154" text-anchor="middle" style="font-size:16px; fill:#1a2233">/ refund()</text>
+    </svg>
+    <div>
+      <ul class="clean">
+        <li>The arrow leaves <b>Active</b> — it applies to every state inside</li>
+        <li><code>ActiveState</code> handles <code>evCancel</code> once</li>
+        <li>It holds its own current sub-state and delegates the rest</li>
+      </ul>
+      <p class="note">A state that holds states: <b>State + Composite</b>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 26 · SUMMARY -->
+<div class="slide">
+  <div class="kicker">Summary</div>
+  <h2>Two patterns</h2>
+  <div class="body">
+    <table class="check">
+      <tr><th></th><th>Composite</th><th>State</th></tr>
+      <tr><td><b>Type</b></td><td>Structural</td><td>Behavioral</td></tr>
+      <tr><td><b>Problem</b></td><td>Clients check: one item or a group?</td><td>Every method checks: which state am I in?</td></tr>
+      <tr><td><b>Key idea</b></td><td>The group implements the same interface and loops over its children</td><td>Each state is a class; the context delegates to the current one</td></tr>
+      <tr><td><b>Removes</b></td><td><code>instanceof</code></td><td><code>switch (status)</code></td></tr>
+      <tr><td><b>BiteExpress</b></td><td><code>MenuItem</code> / <code>Combo</code></td><td><code>Order</code> lifecycle</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="counter"></div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const counter = document.querySelector('.counter');
+  let current = 0;
+
+  function show(i) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides[current].classList.add('active');
+    counter.textContent = `${current + 1} / ${slides.length}`;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); show(current + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   { e.preventDefault(); show(current - 1); }
+  });
+
+  show(0);
+</script>
+</body>
+</html>
